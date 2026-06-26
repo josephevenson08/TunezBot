@@ -26,7 +26,7 @@ player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
   clearInterval(activityInterval);
   activityInterval = setInterval(() => {
     updateBotActivity(queue);
-  }, 1000);
+  }, 3000);
 });
 
 player.events.on(GuildQueueEvent.AudioTracksAdd, (queue, tracks) => {
