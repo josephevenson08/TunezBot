@@ -144,7 +144,7 @@ function playerNodeOptions(channel) {
     metadata: channel,
     leaveOnEmpty: true,
     leaveOnEnd: true,
-    leaveOnEndCooldown: 120000,
+    leaveOnEndCooldown: 300000,
     leaveOnStop: true,
     volume: 70,
   };
