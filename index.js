@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const { Client, Events, GatewayIntentBits } = require('discord.js');
+const { Client, Events, GatewayIntentBits, ActivityType } = require('discord.js');
 const { Player, GuildQueueEvent } = require('discord-player');
 const { YoutubeExtractor } = require('discord-player-youtubei');
 
@@ -16,9 +16,17 @@ const client = new Client({
 });
 
 const player = new Player(client);
+let activityInterval = null;
 
 player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
   queue.metadata?.send(`Now playing: **${track.cleanTitle || track.title}**`).catch(() => {});
+
+  updateBotActivity(queue);
+
+  clearInterval(activityInterval);
+  activityInterval = setInterval(() => {
+    updateBotActivity(queue);
+  }, 1000);
 });
 
 player.events.on(GuildQueueEvent.AudioTracksAdd, (queue, tracks) => {
@@ -27,6 +35,11 @@ player.events.on(GuildQueueEvent.AudioTracksAdd, (queue, tracks) => {
 
 player.events.on(GuildQueueEvent.EmptyQueue, (queue) => {
   queue.metadata?.send('Queue finished.').catch(() => {});
+
+  clearInterval(activityInterval);
+  activityInterval = null;
+
+  client.user.setPresence({ activities: [], status: 'online' });
 });
 
 player.events.on(GuildQueueEvent.Error, (queue, error) => {
@@ -38,6 +51,35 @@ player.events.on(GuildQueueEvent.PlayerError, (queue, error) => {
   console.error(error);
   queue.metadata?.send(`Track error: ${error.message}`).catch(() => {});
 });
+
+function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) {        // check if the ms is a valid number
+    return '0:00';
+  }
+
+  const totalSeconds = Math.floor(ms / 1000);     // calc total seconds/duration of song
+  const minutes = Math.floor(totalSeconds / 60);    // calc the number of minutes
+  const seconds = totalSeconds % 60;            //calc number of seconds
+
+  return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;   
+}
+
+function updateBotActivity(queue) {
+  const track = queue?.currentTrack;
+
+  if (!track) {
+    client.user.setPresence({ activities: [], status: 'online'});
+    return;
+  }
+
+  const timestamp = queue.node.getTimestamp();
+  const current = timestamp?.current?.label || '0:00';
+  const total = timestamp?.total?.label || formatDuration(track.durationMS);
+
+  client.user.setActivity(`${trackTitle(track)} ${current} / ${total}`, {
+    type: ActivityType.Listening,
+  })
+}
 
 function getQueue(interaction) {
   return player.nodes.get(interaction.guildId);
