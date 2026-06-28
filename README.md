@@ -9,25 +9,26 @@ YouTube support comes from the community `discord-player-youtubei` extractor bec
 Use these commands in Discord while you are in a voice channel:
 
 ```text
-/play <YouTube URL or search>
-/queue <YouTube URL or search>
-/queue
-/skip
-/pause
-/resume
-/nowplaying
-/stop
+/tplay <YouTube URL or search>
+/tqueue <YouTube URL or search>
+/tqueue
+/tskip
+/tpause
+/tresume
+/tnowplaying
+/treplay
+/tstop
 ```
 
 Typical flow:
 
 ```text
-/play first song
-/queue second song
-/skip
+/tplay first song
+/tqueue second song
+/tskip
 ```
 
-`/play` starts music. `/queue` with a song adds it after the current song. `/queue` with no song shows what is playing and what is up next. `/skip` moves to the next queued song.
+`/tplay` starts music. `/tqueue` with a song adds it after the current song. `/tqueue` with no song shows what is playing and what is up next. `/tskip` moves to the next queued song.
 
 ## 1. Create the Discord app
 
@@ -92,12 +93,12 @@ Anyone in your server who can use the slash commands can control the bot while i
 Join a voice channel in your server and try:
 
 ```text
-/play never gonna give you up
-/play https://www.youtube.com/watch?v=dQw4w9WgXcQ
-/queue https://www.youtube.com/watch?v=dQw4w9WgXcQ
-/queue
-/skip
-/stop
+/tplay never gonna give you up
+/tplay https://www.youtube.com/watch?v=dQw4w9WgXcQ
+/tqueue https://www.youtube.com/watch?v=dQw4w9WgXcQ
+/tqueue
+/tskip
+/tstop
 ```
 
 ## Notes

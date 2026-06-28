@@ -162,7 +162,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   const { commandName } = interaction;
 
-  if (commandName === 'play') {
+  if (commandName === 'tplay') {
     const channel = ensureVoiceChannel(interaction);
     if (!channel) {
       await interaction.reply({
@@ -192,13 +192,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   const queue = getQueue(interaction);
 
-  if (commandName === 'queue') {
+  if (commandName === 'tqueue') {
     const query = interaction.options.getString('query', false);
 
     if (query) {
       if (!queue || queue.deleted || !queue.currentTrack) {
         await interaction.reply({
-          content: 'Start a song with `/play` first, then use `/queue` to add the next one.',
+          content: 'Start a song with `/tplay` first, then use `/tqueue` to add the next one.',
           ephemeral: true,
         });
         return;
@@ -251,7 +251,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
-  if (commandName === 'skip') {
+  if (commandName === 'tskip') {
     if (queuedTracks(queue).length < 1) {
       await interaction.reply('There is no next track queued.');
       return;
@@ -262,7 +262,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
-  if (commandName === 'replay') {
+  if (commandName === 'treplay') {
     const previous = queue.history.previousTrack;
 
     if (!previous) {
@@ -283,25 +283,25 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
-  if (commandName === 'stop') {
+  if (commandName === 'tstop') {
     queue.delete();
     await interaction.reply('Stopped playback and cleared the queue.');
     return;
   }
 
-  if (commandName === 'pause') {
+  if (commandName === 'tpause') {
     const paused = queue.node.pause();
     await interaction.reply(paused ? 'Paused.' : 'Playback is already paused.');
     return;
   }
 
-  if (commandName === 'resume') {
+  if (commandName === 'tresume') {
     const resumed = queue.node.resume();
     await interaction.reply(resumed ? 'Resumed.' : 'Playback is not paused.');
     return;
   }
 
-  if (commandName === 'nowplaying') {
+  if (commandName === 'tnowplaying') {
     const current = queue.currentTrack;
     const timestamp = queue.node.createProgressBar();
     await interaction.reply(

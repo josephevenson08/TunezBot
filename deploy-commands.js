@@ -11,7 +11,7 @@ if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_ID) {
 
 const commands = [
   new SlashCommandBuilder()
-    .setName('play')
+    .setName('tplay')
     .setDescription('Play a song, playlist, or search query.')
     .addStringOption((option) =>
       option
@@ -19,13 +19,13 @@ const commands = [
         .setDescription('YouTube URL or search text')
         .setRequired(true),
     ),
-  new SlashCommandBuilder().setName('skip').setDescription('Skip the current track.'),
-  new SlashCommandBuilder().setName('replay').setDescription('Replay the previous track.'),
-  new SlashCommandBuilder().setName('stop').setDescription('Stop playback and clear the queue.'),
-  new SlashCommandBuilder().setName('pause').setDescription('Pause playback.'),
-  new SlashCommandBuilder().setName('resume').setDescription('Resume playback.'),
+  new SlashCommandBuilder().setName('tskip').setDescription('Skip the current track.'),
+  new SlashCommandBuilder().setName('treplay').setDescription('Replay the previous track.'),
+  new SlashCommandBuilder().setName('tstop').setDescription('Stop playback and clear the queue.'),
+  new SlashCommandBuilder().setName('tpause').setDescription('Pause playback.'),
+  new SlashCommandBuilder().setName('tresume').setDescription('Resume playback.'),
   new SlashCommandBuilder()
-    .setName('queue')
+    .setName('tqueue')
     .setDescription('Add a song to the queue or show the current queue.')
     .addStringOption((option) =>
       option
@@ -33,7 +33,7 @@ const commands = [
         .setDescription('YouTube URL or search text to queue')
         .setRequired(false),
     ),
-  new SlashCommandBuilder().setName('nowplaying').setDescription('Show the current track.'),
+  new SlashCommandBuilder().setName('tnowplaying').setDescription('Show the current track.'),
 ].map((command) => command.toJSON());
 
 async function main() {

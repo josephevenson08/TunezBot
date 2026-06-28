@@ -135,7 +135,7 @@ npm start
 In Discord, test:
 
 ```text
-/play never gonna give you up
+/tplay never gonna give you up
 ```
 
 Press `Ctrl+C` after testing.
