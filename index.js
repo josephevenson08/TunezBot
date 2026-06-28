@@ -3,6 +3,7 @@ require('dotenv').config();
 const { Client, Events, GatewayIntentBits, ActivityType } = require('discord.js');
 const { Player, GuildQueueEvent } = require('discord-player');
 const { YoutubeExtractor } = require('discord-player-youtubei');
+const youtubeDl = require('youtube-dl-exec');
 
 const { DISCORD_TOKEN } = process.env;
 
@@ -17,6 +18,17 @@ const client = new Client({
 
 const player = new Player(client);
 let activityInterval = null;
+
+async function createYoutubeStream(track) {
+  const output = await youtubeDl(track.url, {
+    getUrl: true,
+    format: track.live ? 'best[height<=360]' : 'bestaudio',
+    noWarnings: true,
+    noProgress: true,
+  });
+
+  return String(output).trim().split(/\r?\n/)[0];
+}
 
 player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
   queue.metadata?.send(`Now playing: **${track.cleanTitle || track.title}**`).catch(() => {});
@@ -151,7 +163,9 @@ function playerNodeOptions(channel) {
 }
 
 client.once(Events.ClientReady, async (readyClient) => {
-  await player.extractors.register(YoutubeExtractor, {});
+  await player.extractors.register(YoutubeExtractor, {
+    createStream: createYoutubeStream,
+  });
   console.log(`Logged in as ${readyClient.user.tag}`);
 });
 
