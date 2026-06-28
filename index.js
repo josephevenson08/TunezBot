@@ -158,6 +158,7 @@ function playerNodeOptions(channel) {
     leaveOnEnd: true,
     leaveOnEndCooldown: 300000,
     leaveOnStop: true,
+    selfDeaf: false,
     volume: 70,
   };
 }
