@@ -262,6 +262,27 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  if (commandName === 'replay') {
+    const previous = queue.history.previousTrack;
+
+    if (!previous) {
+      await interaction.reply('There is no previous track to replay.');
+      return;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      await queue.history.previous(false);
+      await interaction.followUp(`Replaying: **${trackTitle(previous)}**`);
+    } catch (error) {
+      console.error(error);
+      await interaction.followUp(`Could not replay that: ${error.message}`);
+    }
+
+    return;
+  }
+
   if (commandName === 'stop') {
     queue.delete();
     await interaction.reply('Stopped playback and cleared the queue.');

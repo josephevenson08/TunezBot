@@ -20,6 +20,7 @@ const commands = [
         .setRequired(true),
     ),
   new SlashCommandBuilder().setName('skip').setDescription('Skip the current track.'),
+  new SlashCommandBuilder().setName('replay').setDescription('Replay the previous track.'),
   new SlashCommandBuilder().setName('stop').setDescription('Stop playback and clear the queue.'),
   new SlashCommandBuilder().setName('pause').setDescription('Pause playback.'),
   new SlashCommandBuilder().setName('resume').setDescription('Resume playback.'),
