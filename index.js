@@ -190,12 +190,24 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     try {
       const query = normalizePlayQuery(interaction.options.getString('query', true));
+      const existingQueue = getQueue(interaction);
+      const preservedTracks =
+        existingQueue && !existingQueue.deleted ? queuedTracks(existingQueue) : [];
+
+      if (existingQueue && !existingQueue.deleted) {
+        existingQueue.delete();
+      }
+
       const result = await player.play(channel, query, {
         requestedBy: interaction.user,
         nodeOptions: playerNodeOptions(interaction.channel),
       });
 
-      await interaction.followUp(`Added: **${trackTitle(result.track)}**`);
+      if (preservedTracks.length > 0) {
+        result.queue.addTrack(preservedTracks);
+      }
+
+      await interaction.followUp(`Playing: **${trackTitle(result.track)}**`);
     } catch (error) {
       console.error(error);
       await interaction.followUp(`Could not play that: ${error.message}`);
