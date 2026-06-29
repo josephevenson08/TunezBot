@@ -310,6 +310,18 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  if (commandName === 'tclear') {
+    const count = queuedTracks(queue).length;
+
+    if (count < 1) {
+      await interaction.reply('There are no queued songs to clear.');
+      return;
+    }
+
+    queue.clear();
+    await interaction.reply(`Cleared ${count} queued song${count === 1 ? '' : 's'}.`);
+    return;
+  }
   if (commandName === 'tstop') {
     queue.delete();
     await interaction.reply('Stopped playback and cleared the queue.');
