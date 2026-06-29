@@ -25,6 +25,7 @@ const commands = [
   new SlashCommandBuilder().setName('tskip').setDescription('Skip the current track.'),
   new SlashCommandBuilder().setName('treplay').setDescription('Replay the previous track.'),
   new SlashCommandBuilder().setName('tclear').setDescription('Clear queued songs.'),
+  new SlashCommandBuilder().setName('trandom').setDescription('Play a random song from this session'),
   new SlashCommandBuilder().setName('tstop').setDescription('Stop playback and clear the queue.'),
   new SlashCommandBuilder().setName('tpause').setDescription('Pause playback.'),
   new SlashCommandBuilder().setName('tresume').setDescription('Resume playback.'),

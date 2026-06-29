@@ -22,6 +22,7 @@ const client = new Client({
 // Create one music player for the bot and track the activity update timer.
 const player = new Player(client);
 let activityInterval = null;
+let sessionHistory = [];
 
 // Use yt-dlp to get a direct playable YouTube audio stream.
 async function createYoutubeStream(track) {
@@ -38,6 +39,10 @@ async function createYoutubeStream(track) {
 // Music player events handle messages and bot status while tracks play.
 player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
   queue.metadata?.send(`Now playing: **${track.cleanTitle || track.title}**`).catch(() => {});
+
+
+  sessionHistory.push(track);
+  sessionHistory = sessionHistory.slice(-50);//prevent it from growing forever
 
   updateBotActivity(queue);
 
@@ -68,6 +73,16 @@ player.events.on(GuildQueueEvent.Error, (queue, error) => {
 player.events.on(GuildQueueEvent.PlayerError, (queue, error) => {
   console.error(error);
   queue.metadata?.send(`Track error: ${error.message}`).catch(() => {});
+});
+
+// clears knowledge of queued history on disconnect. support for the /trandom function
+player.events.on(GuildQueueEvent.Disconnect, () => { 
+  sessionHistory = [];
+  
+  clearInterval(activityInterval);
+  activityInterval = null;
+
+  client.user.setPresence({ activities: [], status: 'online' });
 });
 
 // Convert milliseconds into m:ss text for the bot's activity status.
@@ -325,6 +340,29 @@ client.on(Events.InteractionCreate, async (interaction) => {
     } catch (error) {
       console.error(error);
       await interaction.followUp(`Could not replay that: ${error.message}`);
+    }
+
+    return;
+  }
+
+  if (commandName === 'trandom') {
+    const candidates = sessionHistory.filter((track) => track.id !== queue.currentTrack?.id);
+
+    if (candidates.length < 1) {
+      await interaction.reply('No previous session songs to choose from yet.');
+      return;
+    }
+
+    const randomTrack = candidates[Math.floor(Math.random() * candidates.length)];
+
+    await interaction.deferReply();
+
+    try {
+      await queue.node.play(randomTrack, { queue: false });
+      await interaction.followUp(`Random replay: **${trackTitle(randomTrack)}**`);
+    } catch (error) {
+      console.error(error);
+      await interaction.followUp(`Could not play a random song: ${error.message}`);
     }
 
     return;
