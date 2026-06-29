@@ -1,7 +1,9 @@
 require('dotenv').config();
 
+// This script registers the bot's slash commands with one Discord server.
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 
+// These values come from .env.
 const { DISCORD_TOKEN, CLIENT_ID, GUILD_ID } = process.env;
 
 if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_ID) {
@@ -9,6 +11,7 @@ if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_ID) {
   process.exit(1);
 }
 
+// Slash command definitions. These are what Discord shows when users type "/".
 const commands = [
   new SlashCommandBuilder()
     .setName('tplay')
@@ -37,6 +40,7 @@ const commands = [
   new SlashCommandBuilder().setName('tnowplaying').setDescription('Show the current track.'),
 ].map((command) => command.toJSON());
 
+// Send the command list to Discord for the configured server.
 async function main() {
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
