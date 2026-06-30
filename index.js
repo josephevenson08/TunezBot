@@ -2,7 +2,7 @@ require('dotenv').config();
 
 // Import the Discord bot tools, music player, YouTube extractor, and yt-dlp wrapper.
 const { Client, Events, GatewayIntentBits, ActivityType } = require('discord.js');
-const { Player, GuildQueueEvent } = require('discord-player');
+const { Player, GuildQueueEvent, QueueRepeatMode } = require('discord-player');
 const { YoutubeExtractor } = require('discord-player-youtubei');
 const youtubeDl = require('youtube-dl-exec');
 
@@ -311,6 +311,23 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  if (commandName === 'tloop') {
+    if (!queue.currentTrack) {
+      await interaction.reply('Nothing is playing right now');
+      return;
+    }
+
+    queue.setRepeatMode(QueueRepeatMode.TRACK);
+    await interaction.reply(`Looping **${trackTitle(queue.currentTrack)}**`);
+    return;
+  }
+
+  if (commandName === 'tstoploop') {
+    queue.setRepeatMode(QueueRepeatMode.OFF);
+    await interaction.reply('Loop stopped. The queue will continue after this song.');
+    return;
+  }
+  
   if (commandName === 'tskip') {
     // Only skip when there is another song ready to play next.
     if (queuedTracks(queue).length < 1) {

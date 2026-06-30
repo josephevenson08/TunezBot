@@ -23,6 +23,8 @@ const commands = [
         .setRequired(true),
     ),
   new SlashCommandBuilder().setName('tskip').setDescription('Skip the current track.'),
+  new SlashCommandBuilder().setName('tloop').setDescription('Loop the current track.'),
+  new SlashCommandBuilder().setName('tstoploop').setDescription('Stop looping the current track.'),
   new SlashCommandBuilder().setName('treplay').setDescription('Replay the previous track.'),
   new SlashCommandBuilder().setName('tclear').setDescription('Clear queued songs.'),
   new SlashCommandBuilder().setName('trandom').setDescription('Play a random song from this session'),
