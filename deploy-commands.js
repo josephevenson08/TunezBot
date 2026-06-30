@@ -4,10 +4,10 @@ require('dotenv').config();
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 
 // These values come from .env.
-const { DISCORD_TOKEN, CLIENT_ID, GUILD_ID } = process.env;
+const { DISCORD_TOKEN, CLIENT_ID, GUILD_IDS } = process.env;
 
-if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_ID) {
-  console.error('Missing DISCORD_TOKEN, CLIENT_ID, or GUILD_ID in .env');
+if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_IDS) {
+  console.error('Missing DISCORD_TOKEN, CLIENT_ID, or GUILD_IDS in .env');
   process.exit(1);
 }
 
@@ -46,10 +46,16 @@ const commands = [
 // Send the command list to Discord for the configured server.
 async function main() {
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
+  const guildIds = GUILD_IDS.split(',').map((id) => id.trim()).filter(Boolen);
 
-  console.log(`Deploying ${commands.length} guild commands...`);
-  await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-  console.log('Commands deployed. They should appear in your server within a minute.');
+  console.log(`Deploying ${commands.length} commands to ${guildIds.length} server(s)`);
+  
+  for (const guildId of guildIds) {
+    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, guildId), { body: commands });
+    console.log(`Commands deployed to guild ${guildId}.`);
+  }
+
+  console.log('Done. Commands should appear within a minute.');
 }
 
 main().catch((error) => {
