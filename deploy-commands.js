@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-// This script registers the bot's slash commands with one Discord server.
+// This script registers the bot's slash commands with one or more Discord servers.
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 
 // These values come from .env.
@@ -43,10 +43,10 @@ const commands = [
   new SlashCommandBuilder().setName('tnowplaying').setDescription('Show the current track.'),
 ].map((command) => command.toJSON());
 
-// Send the command list to Discord for the configured server.
+// Send the command list to every server ID listed in GUILD_IDS.
 async function main() {
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
-  const guildIds = GUILD_IDS.split(',').map((id) => id.trim()).filter(Boolen);
+  const guildIds = GUILD_IDS.split(',').map((id) => id.trim()).filter(Boolean);
 
   console.log(`Deploying ${commands.length} commands to ${guildIds.length} server(s)`);
   
