@@ -13,10 +13,14 @@ Use these commands in Discord while you are in a voice channel:
 /tqueue <YouTube URL or search>
 /tqueue
 /tskip
+/tloop
+/tstoploop
 /tpause
 /tresume
 /tnowplaying
 /treplay
+/trandom
+/tclear
 /tstop
 ```
 
@@ -29,6 +33,19 @@ Typical flow:
 ```
 
 `/tplay` starts music. `/tqueue` with a song adds it after the current song. `/tqueue` with no song shows what is playing and what is up next. `/tskip` moves to the next queued song.
+
+Command notes:
+
+- `/tplay` replaces the current song while keeping the existing queue.
+- `/tqueue` adds a song to the queue, or shows the queue if no song is provided.
+- `/tskip` skips to the next queued song.
+- `/tloop` loops the current song.
+- `/tstoploop` turns looping off so the queue can continue.
+- `/treplay` replays the previous song.
+- `/trandom` plays a random song from the current voice session history.
+- `/tclear` clears queued songs without stopping the current song.
+- `/tstop` stops playback and clears the queue.
+- `/tnowplaying` shows the current song and progress.
 
 ## 1. Create the Discord app
 
@@ -86,7 +103,9 @@ Run `npm run deploy` when slash commands are added or changed. You do not need i
 
 Run `npm start` whenever you want the bot online. The PowerShell window running `npm start` must stay open. VS Code can be closed, but if the terminal closes, your computer sleeps, or your internet disconnects, the bot goes offline.
 
-After the queue finishes, the bot waits 2 minutes for another song. If nothing starts during that time, it leaves the voice channel automatically.
+After the queue finishes, the bot waits 5 minutes for another song. If nothing starts during that time, it leaves the voice channel automatically.
+
+While a song is playing, the bot updates its Discord activity with the song name and timestamp. The bot joins voice undeafened.
 
 Anyone in your server who can use the slash commands can control the bot while it is online.
 
@@ -98,12 +117,16 @@ Join a voice channel in your server and try:
 /tqueue https://www.youtube.com/watch?v=dQw4w9WgXcQ
 /tqueue
 /tskip
+/tloop
+/tstoploop
+/trandom
+/tclear
 /tstop
 ```
 
 ## Notes
 
-Music extractors can break when providers change their sites. If YouTube links stop resolving later, update dependencies with:
+Music extractors can break when providers change their sites. TunezBot uses `discord-player-youtubei` and `youtube-dl-exec` for YouTube playback. If YouTube links stop resolving later, update dependencies with:
 
 ```powershell
 npm update
