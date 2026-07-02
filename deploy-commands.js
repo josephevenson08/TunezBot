@@ -28,6 +28,16 @@ const commands = [
   new SlashCommandBuilder().setName('treplay').setDescription('Replay the previous track.'),
   new SlashCommandBuilder().setName('tclear').setDescription('Clear queued songs.'),
   new SlashCommandBuilder().setName('trandom').setDescription('Play a random song from this session'),
+  new SlashCommandBuilder()
+    .setName('tartist')
+    .setDescription('Keep playing songs by an artist.')
+    .addStringOption((option) =>
+      option
+        .setName('artist')
+        .setDescription('Artist name')
+        .setRequired(true),
+    ),
+  new SlashCommandBuilder().setName('tstopartist').setDescription('Stop artist mode.'),
   new SlashCommandBuilder().setName('tstop').setDescription('Stop playback and clear the queue.'),
   new SlashCommandBuilder().setName('tpause').setDescription('Pause playback.'),
   new SlashCommandBuilder().setName('tresume').setDescription('Resume playback.'),

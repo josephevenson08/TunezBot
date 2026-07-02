@@ -23,6 +23,7 @@ const client = new Client({
 const player = new Player(client);
 let activityInterval = null;
 let sessionHistory = [];
+const artistModes = new Map();
 
 // Use yt-dlp to get a direct playable YouTube audio stream.
 async function createYoutubeStream(track) {
@@ -56,7 +57,23 @@ player.events.on(GuildQueueEvent.AudioTracksAdd, (queue, tracks) => {
   queue.metadata?.send(`Queued **${tracks.length}** tracks.`).catch(() => {});
 });
 
-player.events.on(GuildQueueEvent.EmptyQueue, (queue) => {
+player.events.on(GuildQueueEvent.EmptyQueue, async (queue) => {
+  const artist = artistModes.get(queue.guild.id);
+
+  if (artist) {
+    try {
+      const track = await playArtistTrack(queue, artist);
+
+      if (track) {
+        queue.metadata?.send(`Artist mode: **${trackTitle(track)}**`).catch(() => {});
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+      queue.metadata?.send(`Artist mode could not find another **${artist}** song.`).catch(() => {});
+    }
+  }
+
   queue.metadata?.send('Queue finished.').catch(() => {});
 
   clearInterval(activityInterval);
@@ -75,9 +92,10 @@ player.events.on(GuildQueueEvent.PlayerError, (queue, error) => {
   queue.metadata?.send(`Track error: ${error.message}`).catch(() => {});
 });
 
-// clears knowledge of queued history on disconnect. support for the /trandom function
-player.events.on(GuildQueueEvent.Disconnect, () => { 
+// Clear voice-session state when the bot leaves voice.
+player.events.on(GuildQueueEvent.Disconnect, (queue) => { 
   sessionHistory = [];
+  artistModes.delete(queue.guild.id);
   
   clearInterval(activityInterval);
   activityInterval = null;
@@ -192,6 +210,29 @@ function playerNodeOptions(channel) {
   };
 }
 
+// Find and play another YouTube result for the artist currently in artist mode.
+async function playArtistTrack(queue, artist) {
+  const channel = queue.channel;
+
+  if (!channel) {
+    return null;
+  }
+
+  const searchTerms = [
+    `${artist} official audio`,
+    `${artist} official music video`,
+    `${artist} songs`,
+    `${artist} lyrics`,
+  ];
+  const query = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+
+  const result = await player.play(channel, query, {
+    nodeOptions: playerNodeOptions(queue.metadata),
+  });
+
+  return result.track;
+}
+
 // Load the YouTube extractor once the bot is logged in and ready.
 client.once(Events.ClientReady, async (readyClient) => {
   await player.extractors.register(YoutubeExtractor, {
@@ -246,6 +287,45 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.followUp(`Could not play that: ${error.message}`);
     }
 
+    return;
+  }
+
+  if (commandName === 'tartist') {
+    const channel = ensureVoiceChannel(interaction);
+    if (!channel) {
+      await interaction.reply({
+        content: 'Join the same voice channel as the bot first.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const artist = interaction.options.getString('artist', true);
+    artistModes.set(interaction.guildId, artist);
+
+    await interaction.deferReply();
+
+    try {
+      const result = await player.play(channel, `${artist} official audio`, {
+        requestedBy: interaction.user,
+        nodeOptions: playerNodeOptions(interaction.channel),
+      });
+
+      await interaction.followUp(
+        `Artist mode started for **${artist}**. Added: **${trackTitle(result.track)}**`,
+      );
+    } catch (error) {
+      console.error(error);
+      artistModes.delete(interaction.guildId);
+      await interaction.followUp(`Could not start artist mode: ${error.message}`);
+    }
+
+    return;
+  }
+
+  if (commandName === 'tstopartist') {
+    artistModes.delete(interaction.guildId);
+    await interaction.reply('Artist mode stopped.');
     return;
   }
 
