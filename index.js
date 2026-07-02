@@ -23,6 +23,8 @@ const client = new Client({
 const player = new Player(client);
 let activityInterval = null;
 let sessionHistory = [];
+
+// Stores artist mode by server ID, so each server can use a different artist.
 const artistModes = new Map();
 
 // Use yt-dlp to get a direct playable YouTube audio stream.
@@ -58,6 +60,7 @@ player.events.on(GuildQueueEvent.AudioTracksAdd, (queue, tracks) => {
 });
 
 player.events.on(GuildQueueEvent.EmptyQueue, async (queue) => {
+  // If artist mode is on, keep finding songs by that artist instead of ending.
   const artist = artistModes.get(queue.guild.id);
 
   if (artist) {
@@ -224,6 +227,8 @@ async function playArtistTrack(queue, artist) {
     `${artist} songs`,
     `${artist} lyrics`,
   ];
+
+  // Vary the search phrase a little so artist mode does not always get the same result.
   const query = searchTerms[Math.floor(Math.random() * searchTerms.length)];
 
   const result = await player.play(channel, query, {
@@ -291,6 +296,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (commandName === 'tartist') {
+    // Start artist mode and immediately add one song by that artist.
     const channel = ensureVoiceChannel(interaction);
     if (!channel) {
       await interaction.reply({
@@ -324,6 +330,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (commandName === 'tstopartist') {
+    // Stop artist mode for this server only.
     artistModes.delete(interaction.guildId);
     await interaction.reply('Artist mode stopped.');
     return;
