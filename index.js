@@ -238,6 +238,28 @@ async function playArtistTrack(queue, artist) {
   return result.track;
 }
 
+// Search phrases used to look up songs related to a seed track's artist.
+const RELATED_SEARCH_TEMPLATES = [
+  (author) => `${author} mix`,
+  (author) => `${author} radio`,
+  (author) => `songs like ${author}`,
+];
+
+// Search for a different song stylistically related to the given track.
+async function findRelatedTrack(seedTrack) {
+  const author = seedTrack.author || seedTrack.title;
+  const template = RELATED_SEARCH_TEMPLATES[Math.floor(Math.random() * RELATED_SEARCH_TEMPLATES.length)];
+
+  const result = await player.search(template(author));
+  const candidates = result.tracks.filter((track) => track.id !== seedTrack.id && track.url !== seedTrack.url);
+
+  if (candidates.length < 1) {
+    return null;
+  }
+
+  return candidates[Math.floor(Math.random() * Math.min(candidates.length, 8))];
+}
+
 // Load the YouTube extractor once the bot is logged in and ready.
 client.once(Events.ClientReady, async (readyClient) => {
   await player.extractors.register(YoutubeExtractor, {
@@ -568,6 +590,49 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
 
     await interaction.reply(lines.join('\n'));
+    return;
+  }
+
+  if (commandName === 'trelated') {
+    // Find and queue a song related to the one currently playing.
+    if (!queue.currentTrack) {
+      await interaction.reply('Nothing is playing right now.');
+      return;
+    }
+
+    const channel = ensureVoiceChannel(interaction);
+    if (!channel) {
+      await interaction.reply({
+        content: 'Join the same voice channel as the bot first.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const seed = queue.currentTrack;
+      const related = await findRelatedTrack(seed);
+
+      if (!related) {
+        await interaction.followUp(`Could not find a song related to **${trackTitle(seed)}**.`);
+        return;
+      }
+
+      const result = await player.play(channel, related.url, {
+        requestedBy: interaction.user,
+        nodeOptions: playerNodeOptions(interaction.channel),
+      });
+
+      await interaction.followUp(
+        `Related to **${trackTitle(seed)}** — queued: **${trackTitle(result.track)}**`,
+      );
+    } catch (error) {
+      console.error(error);
+      await interaction.followUp(`Could not find a related song: ${error.message}`);
+    }
+
     return;
   }
 

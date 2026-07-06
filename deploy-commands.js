@@ -62,6 +62,7 @@ const commands = [
         .setMinValue(1),
     ),
   new SlashCommandBuilder().setName('thistory').setDescription('List songs played this session.'),
+  new SlashCommandBuilder().setName('trelated').setDescription('Queue a song related to the current one.'),
 ].map((command) => command.toJSON());
 
 // Send the command list to every server ID listed in GUILD_IDS.

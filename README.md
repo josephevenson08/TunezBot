@@ -24,6 +24,7 @@ Use these commands in Discord while you are in a voice channel:
 /thistory
 /tartist <artist name>
 /tstopartist
+/trelated
 /tclear
 /tstop
 ```
@@ -51,6 +52,7 @@ Command notes:
 - `/thistory` lists the songs played so far this session.
 - `/tartist` keeps queueing more songs by an artist whenever the queue runs out.
 - `/tstopartist` turns artist mode off.
+- `/trelated` finds and queues a song related to what's currently playing.
 - `/tclear` clears queued songs without stopping the current song.
 - `/tstop` stops playback and clears the queue.
 - `/tnowplaying` shows the current song, progress, requester, and any active modes.
