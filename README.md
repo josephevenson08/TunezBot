@@ -69,7 +69,7 @@ Command notes:
 
 1. In Discord, open **User Settings > Advanced**.
 2. Turn on **Developer Mode**.
-3. Right-click your server icon and click **Copy Server ID**. That is your `GUILD_ID`.
+3. Right-click your server icon and click **Copy Server ID**. That is one of your `GUILD_IDS`.
 
 ## 3. Configure this project
 
@@ -78,8 +78,10 @@ Copy `.env.example` to `.env`, then fill it in:
 ```env
 DISCORD_TOKEN=your_bot_token_here
 CLIENT_ID=your_application_client_id_here
-GUILD_ID=your_discord_server_id_here
+GUILD_IDS=your_discord_server_id_here
 ```
+
+`GUILD_IDS` accepts a comma-separated list if you deploy commands to more than one server (for example a test server and your real one).
 
 ## 4. Invite the bot
 

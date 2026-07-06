@@ -122,7 +122,7 @@ Add your real values:
 ```env
 DISCORD_TOKEN=your_bot_token_here
 CLIENT_ID=your_application_client_id_here
-GUILD_ID=your_discord_server_id_here
+GUILD_IDS=your_discord_server_id_here
 ```
 
 ## 7. Deploy Commands And Test

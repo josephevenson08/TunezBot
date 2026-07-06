@@ -14,18 +14,37 @@ if (!DISCORD_TOKEN) {
   process.exit(1);
 }
 
+// Log unexpected errors instead of failing silently or crashing with no context.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+  process.exit(1);
+});
+
 // Create the Discord client. GuildVoiceStates is required for voice channel/music features.
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
 });
 
-// Create one music player for the bot and track the activity update timer.
+// Create one music player for the bot.
 const player = new Player(client);
-let activityInterval = null;
-let sessionHistory = [];
 
-// Stores artist mode by server ID, so each server can use a different artist.
+// Per-guild state, all keyed by guild ID so multiple servers never share state.
+const activityIntervals = new Map();
+const sessionHistories = new Map();
 const artistModes = new Map();
+
+// Get (and lazily create) the play history array for a guild.
+function getSessionHistory(guildId) {
+  if (!sessionHistories.has(guildId)) {
+    sessionHistories.set(guildId, []);
+  }
+
+  return sessionHistories.get(guildId);
+}
 
 // Use yt-dlp to get a direct playable YouTube audio stream.
 async function createYoutubeStream(track) {
@@ -43,16 +62,20 @@ async function createYoutubeStream(track) {
 player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
   queue.metadata?.send(`Now playing: **${track.cleanTitle || track.title}**`).catch(() => {});
 
-
-  sessionHistory.push(track);
-  sessionHistory = sessionHistory.slice(-50);//prevent it from growing forever
+  const guildId = queue.guild.id;
+  const history = getSessionHistory(guildId);
+  history.push(track);
+  sessionHistories.set(guildId, history.slice(-50));//prevent it from growing forever
 
   updateBotActivity(queue);
 
-  clearInterval(activityInterval);
-  activityInterval = setInterval(() => {
-    updateBotActivity(queue);
-  }, 3000);
+  clearInterval(activityIntervals.get(guildId));
+  activityIntervals.set(
+    guildId,
+    setInterval(() => {
+      updateBotActivity(queue);
+    }, 3000),
+  );
 });
 
 player.events.on(GuildQueueEvent.AudioTracksAdd, (queue, tracks) => {
@@ -79,8 +102,8 @@ player.events.on(GuildQueueEvent.EmptyQueue, async (queue) => {
 
   queue.metadata?.send('Queue finished.').catch(() => {});
 
-  clearInterval(activityInterval);
-  activityInterval = null;
+  clearInterval(activityIntervals.get(queue.guild.id));
+  activityIntervals.delete(queue.guild.id);
 
   client.user.setPresence({ activities: [], status: 'online' });
 });
@@ -97,11 +120,12 @@ player.events.on(GuildQueueEvent.PlayerError, (queue, error) => {
 
 // Clear voice-session state when the bot leaves voice.
 player.events.on(GuildQueueEvent.Disconnect, (queue) => {
-  sessionHistory = [];
-  artistModes.delete(queue.guild.id);
+  const guildId = queue.guild.id;
+  sessionHistories.delete(guildId);
+  artistModes.delete(guildId);
 
-  clearInterval(activityInterval);
-  activityInterval = null;
+  clearInterval(activityIntervals.get(guildId));
+  activityIntervals.delete(guildId);
 
   client.user.setPresence({ activities: [], status: 'online' });
 });
@@ -230,8 +254,22 @@ async function playArtistTrack(queue, artist) {
 
   // Vary the search phrase a little so artist mode does not always get the same result.
   const query = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+  const searchResult = await player.search(query);
 
-  const result = await player.play(channel, query, {
+  // Avoid repeating a song this guild already heard this session, if a fresh option exists.
+  // Track.id is freshly generated per search call (even for the same video), so
+  // Track.url (which embeds the real YouTube video ID) is the only stable key here.
+  const recentUrls = new Set(getSessionHistory(queue.guild.id).map((track) => track.url));
+  const fresh = searchResult.tracks.filter((track) => !recentUrls.has(track.url));
+  const pool = fresh.length > 0 ? fresh : searchResult.tracks;
+
+  if (pool.length < 1) {
+    return null;
+  }
+
+  const chosen = pool[Math.floor(Math.random() * Math.min(pool.length, 8))];
+
+  const result = await player.play(channel, chosen.url, {
     nodeOptions: playerNodeOptions(queue.metadata),
   });
 
@@ -246,12 +284,17 @@ const RELATED_SEARCH_TEMPLATES = [
 ];
 
 // Search for a different song stylistically related to the given track.
-async function findRelatedTrack(seedTrack) {
+async function findRelatedTrack(guildId, seedTrack) {
   const author = seedTrack.author || seedTrack.title;
   const template = RELATED_SEARCH_TEMPLATES[Math.floor(Math.random() * RELATED_SEARCH_TEMPLATES.length)];
 
   const result = await player.search(template(author));
-  const candidates = result.tracks.filter((track) => track.id !== seedTrack.id && track.url !== seedTrack.url);
+  // Track.url (which embeds the real YouTube video ID) is stable across search
+  // calls; Track.id is not, so it can't be used to detect repeats here.
+  const recentUrls = new Set(getSessionHistory(guildId).map((track) => track.url));
+  const candidates = result.tracks.filter(
+    (track) => track.url !== seedTrack.url && !recentUrls.has(track.url),
+  );
 
   if (candidates.length < 1) {
     return null;
@@ -262,9 +305,15 @@ async function findRelatedTrack(seedTrack) {
 
 // Load the YouTube extractor once the bot is logged in and ready.
 client.once(Events.ClientReady, async (readyClient) => {
-  await player.extractors.register(YoutubeExtractor, {
-    createStream: createYoutubeStream,
-  });
+  try {
+    await player.extractors.register(YoutubeExtractor, {
+      createStream: createYoutubeStream,
+    });
+  } catch (error) {
+    console.error('Failed to register the YouTube extractor. Music playback will not work.', error);
+    process.exit(1);
+  }
+
   console.log(`Logged in as ${readyClient.user.tag}`);
 });
 
@@ -286,6 +335,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
       return;
     }
+
+    // Starting a specific song this way overrides artist mode, if it was on.
+    artistModes.delete(interaction.guildId);
 
     await interaction.deferReply();
 
@@ -472,7 +524,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (commandName === 'trandom') {
-    const candidates = sessionHistory.filter((track) => track.id !== queue.currentTrack?.id);
+    const candidates = getSessionHistory(interaction.guildId).filter(
+      (track) => track.id !== queue.currentTrack?.id,
+    );
 
     if (candidates.length < 1) {
       await interaction.reply('No previous session songs to choose from yet.');
@@ -509,7 +563,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (commandName === 'tstop') {
-    // Stop playback completely and remove the whole queue.
+    // Stop playback completely, remove the whole queue, and cancel artist mode.
+    artistModes.delete(interaction.guildId);
     queue.delete();
     await interaction.reply('Stopped playback and cleared the queue.');
     return;
@@ -578,12 +633,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   if (commandName === 'thistory') {
     // List the most recently played songs from this voice session.
-    if (sessionHistory.length < 1) {
+    const history = getSessionHistory(interaction.guildId);
+
+    if (history.length < 1) {
       await interaction.reply('No songs have been played yet this session.');
       return;
     }
 
-    const recent = sessionHistory.slice(-15).reverse();
+    const recent = history.slice(-15).reverse();
     const lines = recent.map((track, index) => {
       const nowPlayingMarker = queue.currentTrack?.id === track.id ? ' (now playing)' : '';
       return `${index + 1}. ${trackTitle(track)}${nowPlayingMarker}`;
@@ -613,7 +670,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     try {
       const seed = queue.currentTrack;
-      const related = await findRelatedTrack(seed);
+      const related = await findRelatedTrack(interaction.guildId, seed);
 
       if (!related) {
         await interaction.followUp(`Could not find a song related to **${trackTitle(seed)}**.`);
