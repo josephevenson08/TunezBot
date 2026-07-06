@@ -20,6 +20,8 @@ Use these commands in Discord while you are in a voice channel:
 /tnowplaying
 /treplay
 /trandom
+/tartist <artist name>
+/tstopartist
 /tclear
 /tstop
 ```
@@ -43,9 +45,11 @@ Command notes:
 - `/tstoploop` turns looping off so the queue can continue.
 - `/treplay` replays the previous song.
 - `/trandom` plays a random song from the current voice session history.
+- `/tartist` keeps queueing more songs by an artist whenever the queue runs out.
+- `/tstopartist` turns artist mode off.
 - `/tclear` clears queued songs without stopping the current song.
 - `/tstop` stops playback and clears the queue.
-- `/tnowplaying` shows the current song and progress.
+- `/tnowplaying` shows the current song, progress, requester, and any active modes.
 
 ## 1. Create the Discord app
 

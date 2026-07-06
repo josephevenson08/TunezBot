@@ -96,10 +96,10 @@ player.events.on(GuildQueueEvent.PlayerError, (queue, error) => {
 });
 
 // Clear voice-session state when the bot leaves voice.
-player.events.on(GuildQueueEvent.Disconnect, (queue) => { 
+player.events.on(GuildQueueEvent.Disconnect, (queue) => {
   sessionHistory = [];
   artistModes.delete(queue.guild.id);
-  
+
   clearInterval(activityInterval);
   activityInterval = null;
 
@@ -116,7 +116,7 @@ function formatDuration(ms) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
-  return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;   
+  return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 }
 
 // Show "Song Name current / total" as the bot's Discord activity.
@@ -414,7 +414,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await interaction.reply('Loop stopped. The queue will continue after this song.');
     return;
   }
-  
+
   if (commandName === 'tskip') {
     // Only skip when there is another song ready to play next.
     if (queuedTracks(queue).length < 1) {
@@ -508,11 +508,24 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (commandName === 'tnowplaying') {
-    // Show the current song and Discord Player's progress bar.
+    // Show the current song, progress bar, and any active modes.
     const current = queue.currentTrack;
-    const timestamp = queue.node.createProgressBar();
+
+    if (!current) {
+      await interaction.reply('Nothing is playing.');
+      return;
+    }
+
+    const progressBar = queue.node.createProgressBar();
+    const requester = current.requestedBy ? ` (requested by ${current.requestedBy})` : '';
+    const loopLine = queue.repeatMode === QueueRepeatMode.TRACK ? '\nLooping this track.' : '';
+    const artist = artistModes.get(interaction.guildId);
+    const artistLine = artist ? `\nArtist mode: **${artist}**` : '';
+    const upcomingCount = queuedTracks(queue).length;
+    const queueLine = upcomingCount > 0 ? `\n${upcomingCount} song${upcomingCount === 1 ? '' : 's'} queued next.` : '';
+
     await interaction.reply(
-      current ? `Now playing: **${trackTitle(current)}**\n${timestamp || ''}` : 'Nothing is playing.',
+      `Now playing: **${trackTitle(current)}**${requester}\n${progressBar || ''}${loopLine}${artistLine}${queueLine}`,
     );
     return;
   }
