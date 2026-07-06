@@ -554,6 +554,23 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  if (commandName === 'thistory') {
+    // List the most recently played songs from this voice session.
+    if (sessionHistory.length < 1) {
+      await interaction.reply('No songs have been played yet this session.');
+      return;
+    }
+
+    const recent = sessionHistory.slice(-15).reverse();
+    const lines = recent.map((track, index) => {
+      const nowPlayingMarker = queue.currentTrack?.id === track.id ? ' (now playing)' : '';
+      return `${index + 1}. ${trackTitle(track)}${nowPlayingMarker}`;
+    });
+
+    await interaction.reply(lines.join('\n'));
+    return;
+  }
+
 });
 
 client.login(DISCORD_TOKEN);

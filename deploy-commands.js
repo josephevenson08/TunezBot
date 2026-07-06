@@ -61,6 +61,7 @@ const commands = [
         .setRequired(true)
         .setMinValue(1),
     ),
+  new SlashCommandBuilder().setName('thistory').setDescription('List songs played this session.'),
 ].map((command) => command.toJSON());
 
 // Send the command list to every server ID listed in GUILD_IDS.
