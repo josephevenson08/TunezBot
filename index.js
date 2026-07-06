@@ -530,6 +530,30 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  if (commandName === 'tremove') {
+    // Remove one queued song by its displayed position (1-based, matches /tqueue's list).
+    const position = interaction.options.getInteger('position', true);
+    const tracks = queuedTracks(queue);
+
+    if (position < 1 || position > tracks.length) {
+      await interaction.reply({
+        content:
+          tracks.length > 0
+            ? `Give a position between 1 and ${tracks.length}.`
+            : 'There are no queued songs to remove.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const removed = queue.node.remove(position - 1);
+
+    await interaction.reply(
+      removed ? `Removed **${trackTitle(removed)}** from the queue.` : 'Could not remove that track.',
+    );
+    return;
+  }
+
 });
 
 client.login(DISCORD_TOKEN);

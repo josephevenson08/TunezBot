@@ -51,6 +51,16 @@ const commands = [
         .setRequired(false),
     ),
   new SlashCommandBuilder().setName('tnowplaying').setDescription('Show the current track.'),
+  new SlashCommandBuilder()
+    .setName('tremove')
+    .setDescription('Remove a song from the queue by its position.')
+    .addIntegerOption((option) =>
+      option
+        .setName('position')
+        .setDescription('Position in the queue, as shown by /tqueue')
+        .setRequired(true)
+        .setMinValue(1),
+    ),
 ].map((command) => command.toJSON());
 
 // Send the command list to every server ID listed in GUILD_IDS.

@@ -12,6 +12,7 @@ Use these commands in Discord while you are in a voice channel:
 /tplay <YouTube URL or search>
 /tqueue <YouTube URL or search>
 /tqueue
+/tremove <position>
 /tskip
 /tloop
 /tstoploop
@@ -40,6 +41,7 @@ Command notes:
 
 - `/tplay` replaces the current song while keeping the existing queue.
 - `/tqueue` adds a song to the queue, or shows the queue if no song is provided.
+- `/tremove` removes one song from the queue by its position, using the numbers shown by `/tqueue`.
 - `/tskip` skips to the next queued song.
 - `/tloop` loops the current song.
 - `/tstoploop` turns looping off so the queue can continue.
