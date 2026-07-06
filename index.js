@@ -695,4 +695,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 });
 
-client.login(DISCORD_TOKEN);
+client.login(DISCORD_TOKEN).catch((error) => {
+  console.error('Failed to log in to Discord. Check DISCORD_TOKEN in .env.', error);
+  process.exit(1);
+});
