@@ -490,9 +490,32 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (commandName === 'tskip') {
-    // Only skip when there is another song ready to play next.
+    const artist = artistModes.get(interaction.guildId);
+
+    // Nothing queued: in artist mode, fetch a fresh pick instead of refusing.
     if (queuedTracks(queue).length < 1) {
-      await interaction.reply('There is no next track queued.');
+      if (!artist) {
+        await interaction.reply('There is no next track queued.');
+        return;
+      }
+
+      await interaction.deferReply();
+
+      try {
+        const track = await playArtistTrack(queue, artist);
+
+        if (!track) {
+          await interaction.followUp(`Could not find another **${artist}** song to skip to.`);
+          return;
+        }
+
+        queue.node.skip();
+        await interaction.followUp(`Skipped. Artist mode: **${trackTitle(track)}**`);
+      } catch (error) {
+        console.error(error);
+        await interaction.followUp(`Could not find another **${artist}** song: ${error.message}`);
+      }
+
       return;
     }
 
