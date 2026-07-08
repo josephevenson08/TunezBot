@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TunezBot — the DJ booth console</title>
+<meta name="description" content="A personal Discord music bot for one server. Get the commands, the setup steps, and the GitHub repo.">
+<style>
+  :root {
+    --ink: #0e1116;
+    --panel: #171c24;
+    --panel-2: #1c2330;
+    --well: #12161d;
+    --line: #2a3341;
+    --paper: #f1ece1;
+    --paper-dim: #a4aab6;
+    --paper-faint: #6d7481;
+    --amber: #e8974b;
+    --amber-soft: #c98653;
+    --amber-dim: #6b4a2a;
+    --phosphor: #5fd9c2;
+    --phosphor-dim: #2f5c53;
+    --radius: 10px;
+    --wrap: 880px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    background:
+      repeating-linear-gradient(180deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px),
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(232,151,75,0.10), transparent 60%),
+      var(--ink);
+    color: var(--paper);
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono {
+    font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
+  }
+
+  a { color: var(--phosphor); }
+  a:focus-visible, button:focus-visible, .key:focus-visible {
+    outline: 2px solid var(--phosphor);
+    outline-offset: 3px;
+  }
+
+  h1, h2, h3 { text-wrap: balance; margin: 0; font-weight: 400; }
+
+  .wrap {
+    max-width: var(--wrap);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* connecting patch-cable line down the page */
+  main {
+    position: relative;
+  }
+  main::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, var(--line) 8%, var(--line) 92%, transparent);
+    z-index: 0;
+  }
+
+  section, header.hero {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---------- header / hero ---------- */
+  header.hero {
+    padding: 4.5rem 0 2.5rem;
+    text-align: center;
+  }
+
+  .power {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--amber-soft);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.4rem 0.9rem 0.4rem 0.7rem;
+  }
+  .power-led {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--phosphor);
+    box-shadow: 0 0 6px 1px var(--phosphor);
+    animation: pulse 2.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  .headline {
+    margin-top: 1.6rem;
+    font-size: clamp(2.6rem, 4vw + 1.6rem, 5.2rem);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--paper);
+    text-shadow: 0 0 18px rgba(232,151,75,0.35), 0 0 2px rgba(232,151,75,0.6);
+    animation: flicker 6s ease-in-out infinite;
+  }
+  .headline span { color: var(--amber); }
+
+  @keyframes flicker {
+    0%, 96%, 100% { opacity: 1; }
+    97% { opacity: 0.85; }
+    98% { opacity: 1; }
+    98.5% { opacity: 0.9; }
+  }
+
+  .sub {
+    max-width: 46ch;
+    margin: 1.4rem auto 0;
+    color: var(--paper-dim);
+    font-size: 1.08rem;
+  }
+
+  canvas#scope {
+    display: block;
+    width: 100%;
+    height: 90px;
+    margin: 2.4rem auto 0;
+    max-width: 560px;
+  }
+
+  .cta-row {
+    display: flex;
+    gap: 0.9rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2.1rem;
+  }
+
+  .btn {
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.75rem 1.35rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--ink);
+    font-weight: bold;
+  }
+  .btn-primary:hover { box-shadow: 0 0 0 3px rgba(232,151,75,0.22); }
+  .btn-ghost {
+    background: var(--panel);
+    color: var(--paper);
+  }
+  .btn-ghost:hover { border-color: var(--phosphor); color: var(--phosphor); }
+
+  /* ---------- shared section chrome ---------- */
+  section { padding: 3.2rem 0; }
+
+  .eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--phosphor);
+    margin-bottom: 0.7rem;
+    display: block;
+  }
+
+  .section-head h2 {
+    font-size: clamp(1.5rem, 1vw + 1.3rem, 2rem);
+  }
+  .section-head p {
+    color: var(--paper-dim);
+    max-width: 58ch;
+    margin-top: 0.7rem;
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.is-visible { opacity: 1; transform: none; }
+
+  /* ---------- stats strip ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 1.8rem;
+  }
+  .stat {
+    background: var(--panel);
+    padding: 1.3rem 1.2rem;
+  }
+  .stat-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--paper-faint);
+  }
+  .stat-value {
+    margin-top: 0.5rem;
+    font-size: 1.3rem;
+    color: var(--amber);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- command deck ---------- */
+  .deck {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.7rem;
+    margin-top: 1.8rem;
+  }
+  .key {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .key:hover {
+    border-color: var(--amber-dim);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  }
+  .key .cmd {
+    color: var(--amber);
+    font-size: 0.92rem;
+  }
+  .key .desc {
+    margin-top: 0.35rem;
+    color: var(--paper-dim);
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .note {
+    margin-top: 1.4rem;
+    color: var(--paper-faint);
+    font-size: 0.9rem;
+  }
+
+  /* ---------- install steps ---------- */
+  .steps {
+    margin-top: 1.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 2rem 1fr auto;
+    align-items: center;
+    gap: 0.9rem;
+    background: var(--well);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.8rem 0.9rem;
+  }
+  .step-num {
+    color: var(--phosphor-dim);
+    font-size: 0.85rem;
+    text-align: right;
+  }
+  .step code {
+    font-size: 0.86rem;
+    color: var(--paper);
+    overflow-x: auto;
+    white-space: pre;
+    scrollbar-width: thin;
+  }
+  .copy {
+    font-family: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--paper-dim);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .copy:hover { color: var(--phosphor); border-color: var(--phosphor-dim); }
+  .copy.copied { color: var(--phosphor); border-color: var(--phosphor); }
+
+  .env-note {
+    margin-top: 1rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--amber-dim);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 0.9rem 1.1rem;
+    font-size: 0.9rem;
+    color: var(--paper-dim);
+  }
+  .env-note code { color: var(--amber-soft); }
+
+  /* ---------- closing cta ---------- */
+  .closing {
+    text-align: center;
+    padding: 3.6rem 0 2rem;
+  }
+  .closing h2 {
+    font-size: clamp(1.6rem, 1.4vw + 1.3rem, 2.3rem);
+  }
+  .closing p {
+    color: var(--paper-dim);
+    max-width: 44ch;
+    margin: 0.8rem auto 0;
+  }
+  .closing .cta-row { margin-top: 1.8rem; }
+
+  footer {
+    text-align: center;
+    padding: 2rem 0 3rem;
+    color: var(--paper-faint);
+    font-size: 0.82rem;
+  }
+  footer a { color: var(--paper-faint); text-decoration-color: var(--line); }
+  footer a:hover { color: var(--phosphor); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .power-led, .headline { animation: none; }
+    .reveal { transition: none; opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="wrap">
+      <span class="power mono"><span class="power-led" aria-hidden="true"></span>online — one voice channel, one queue</span>
+      <h1 class="headline mono">Tunez<span>bot</span></h1>
+      <p class="sub">A personal Discord music bot built for one server. Type a song, it plays through YouTube, and it knows when to quietly leave the channel.</p>
+      <canvas id="scope" width="1120" height="180" aria-hidden="true"></canvas>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/josephevenson08/TunezBot" target="_blank" rel="noopener">Open the repo ↗</a>
+        <button class="btn btn-ghost copy" data-copy="git clone https://github.com/josephevenson08/TunezBot.git">Copy git clone</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="reveal">
+    <div class="wrap">
+      <span class="eyebrow mono">on the board</span>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label mono">servers supported</div>
+          <div class="stat-value mono">1</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label mono">slash commands</div>
+          <div class="stat-value mono">17</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label mono">audio engine</div>
+          <div class="stat-value mono">discord-player v7</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label mono">idle timeout</div>
+          <div class="stat-value mono">5 min</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="reveal">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow mono">command deck</span>
+        <h2>Everything it takes requests for</h2>
+        <p>Used from any voice channel in the server. Anyone who can run slash commands can drive it — there's no login, no permission tiers, no gatekeeping.</p>
+      </div>
+      <div class="deck">
+        <div class="key"><div class="cmd mono">/tplay &lt;song&gt;</div><div class="desc">Starts music, replacing the current song but keeping the queue.</div></div>
+        <div class="key"><div class="cmd mono">/tqueue &lt;song&gt;</div><div class="desc">Adds a song after the one that's playing.</div></div>
+        <div class="key"><div class="cmd mono">/tqueue</div><div class="desc">Shows what's playing and what's up next.</div></div>
+        <div class="key"><div class="cmd mono">/tremove &lt;position&gt;</div><div class="desc">Removes one queued song by its number.</div></div>
+        <div class="key"><div class="cmd mono">/tskip</div><div class="desc">Moves on to the next queued song.</div></div>
+        <div class="key"><div class="cmd mono">/tloop</div><div class="desc">Loops the current song.</div></div>
+        <div class="key"><div class="cmd mono">/tstoploop</div><div class="desc">Turns looping off so the queue keeps moving.</div></div>
+        <div class="key"><div class="cmd mono">/tpause · /tresume</div><div class="desc">Pauses playback, or picks it back up.</div></div>
+        <div class="key"><div class="cmd mono">/tnowplaying</div><div class="desc">Shows the current song, progress, and who requested it.</div></div>
+        <div class="key"><div class="cmd mono">/treplay</div><div class="desc">Replays the previous song.</div></div>
+        <div class="key"><div class="cmd mono">/trandom</div><div class="desc">Plays a random song from this session's history.</div></div>
+        <div class="key"><div class="cmd mono">/thistory</div><div class="desc">Lists every song played so far this session.</div></div>
+        <div class="key"><div class="cmd mono">/tartist &lt;name&gt;</div><div class="desc">Keeps queueing more by that artist whenever the queue runs dry.</div></div>
+        <div class="key"><div class="cmd mono">/tstopartist</div><div class="desc">Turns artist mode back off.</div></div>
+        <div class="key"><div class="cmd mono">/trelated</div><div class="desc">Finds and queues a song related to what's playing.</div></div>
+        <div class="key"><div class="cmd mono">/tclear</div><div class="desc">Clears the queue without stopping the current song.</div></div>
+        <div class="key"><div class="cmd mono">/tstop</div><div class="desc">Stops playback and clears everything.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="reveal">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow mono">pulling it down</span>
+        <h2>Get it running</h2>
+        <p>Five steps from a clone to a bot sitting in your voice channel.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num mono">1</div>
+          <code class="mono">git clone https://github.com/josephevenson08/TunezBot.git</code>
+          <button class="copy" data-copy="git clone https://github.com/josephevenson08/TunezBot.git">Copy</button>
+        </div>
+        <div class="step">
+          <div class="step-num mono">2</div>
+          <code class="mono">cd TunezBot &amp;&amp; npm install</code>
+          <button class="copy" data-copy="cd TunezBot && npm install">Copy</button>
+        </div>
+        <div class="step">
+          <div class="step-num mono">3</div>
+          <code class="mono">cp .env.example .env</code>
+          <button class="copy" data-copy="cp .env.example .env">Copy</button>
+        </div>
+        <div class="step">
+          <div class="step-num mono">4</div>
+          <code class="mono">npm run deploy</code>
+          <button class="copy" data-copy="npm run deploy">Copy</button>
+        </div>
+        <div class="step">
+          <div class="step-num mono">5</div>
+          <code class="mono">npm start</code>
+          <button class="copy" data-copy="npm start">Copy</button>
+        </div>
+      </div>
+      <div class="env-note">
+        Step 3 needs real values before step 4 — <code>DISCORD_TOKEN</code>, <code>CLIENT_ID</code>, and <code>GUILD_IDS</code> from the Discord Developer Portal. The README in the repo walks through getting each one.
+      </div>
+    </div>
+  </section>
+
+  <section class="closing reveal">
+    <div class="wrap">
+      <span class="eyebrow mono">patch in</span>
+      <h2>One server. One queue. Runs until it doesn't need to.</h2>
+      <p>The full source, setup notes, and hosting guides live in the repo.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/josephevenson08/TunezBot" target="_blank" rel="noopener">View TunezBot on GitHub ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      TunezBot · ISC licensed · <a href="https://github.com/josephevenson08/TunezBot" target="_blank" rel="noopener">github.com/josephevenson08/TunezBot</a>
+    </div>
+  </footer>
+</main>
+
+<script>
+  (function () {
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // ambient oscilloscope
+    var canvas = document.getElementById('scope');
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width, h = canvas.height;
+    var t = 0;
+
+    function drawWave(time) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.beginPath();
+      var mid = h / 2;
+      for (var x = 0; x <= w; x += 4) {
+        var y = mid
+          + Math.sin(x * 0.02 + time) * 22
+          + Math.sin(x * 0.05 + time * 1.7) * 10
+          + Math.sin(x * 0.011 - time * 0.6) * 14;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#5fd9c2';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = 'rgba(95,217,194,0.6)';
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+    }
+
+    if (reduceMotion) {
+      drawWave(0.4);
+    } else {
+      (function loop() {
+        t += 0.02;
+        drawWave(t);
+        requestAnimationFrame(loop);
+      })();
+    }
+
+    // copy buttons
+    document.querySelectorAll('[data-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-copy');
+        var done = function () {
+          var original = btn.textContent;
+          btn.textContent = 'Copied';
+          btn.classList.add('copied');
+          setTimeout(function () {
+            btn.textContent = original;
+            btn.classList.remove('copied');
+          }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text, done); });
+        } else {
+          fallbackCopy(text, done);
+        }
+      });
+    });
+
+    function fallbackCopy(text, done) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    // scroll reveal
+    var targets = document.querySelectorAll('.reveal');
+    if ('IntersectionObserver' in window && !reduceMotion) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      targets.forEach(function (el) { io.observe(el); });
+    } else {
+      targets.forEach(function (el) { el.classList.add('is-visible'); });
+    }
+  })();
+</script>
+</body>
+</html>
