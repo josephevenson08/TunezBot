@@ -252,6 +252,22 @@ async function resolveToUrl(rawQuery) {
   return url;
 }
 
+// Retry a flaky operation once after a short delay. YouTube's extraction occasionally
+// fails on the first attempt under bursty automated request patterns; a short pause
+// and a single retry often succeeds where an immediate second attempt would not.
+async function withRetry(fn, retries = 1, delayMs = 1500) {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries <= 0) {
+      throw error;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    return withRetry(fn, retries - 1, delayMs);
+  }
+}
+
 // Discord Player stores queued songs in a custom queue object, so normalize it to an array.
 function queuedTracks(queue) {
   if (typeof queue.tracks.toArray === 'function') {
@@ -304,9 +320,11 @@ async function playArtistTrack(queue, artist) {
 
   const chosen = pool[Math.floor(Math.random() * Math.min(pool.length, 8))];
 
-  const result = await player.play(channel, chosen, {
-    nodeOptions: playerNodeOptions(queue.metadata),
-  });
+  const result = await withRetry(() =>
+    player.play(channel, chosen, {
+      nodeOptions: playerNodeOptions(queue.metadata),
+    }),
+  );
 
   return result.track;
 }
@@ -382,10 +400,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
         existingQueue.delete();
       }
 
-      const result = await player.play(channel, query, {
-        requestedBy: interaction.user,
-        nodeOptions: playerNodeOptions(interaction.channel),
-      });
+      const result = await withRetry(() =>
+        player.play(channel, query, {
+          requestedBy: interaction.user,
+          nodeOptions: playerNodeOptions(interaction.channel),
+        }),
+      );
 
       if (preservedTracks.length > 0) {
         result.queue.addTrack(preservedTracks);
@@ -423,10 +443,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
         throw new Error('No results found for that artist.');
       }
 
-      const result = await player.play(channel, artistUrl, {
-        requestedBy: interaction.user,
-        nodeOptions: playerNodeOptions(interaction.channel),
-      });
+      const result = await withRetry(() =>
+        player.play(channel, artistUrl, {
+          requestedBy: interaction.user,
+          nodeOptions: playerNodeOptions(interaction.channel),
+        }),
+      );
 
       await interaction.followUp(
         `Artist mode started for **${artist}**. Added: **${trackTitle(result.track)}**`,
@@ -474,10 +496,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferReply();
 
       try {
-        const result = await player.play(channel, await resolveToUrl(query), {
-          requestedBy: interaction.user,
-          nodeOptions: playerNodeOptions(interaction.channel),
-        });
+        const resolvedUrl = await resolveToUrl(query);
+        const result = await withRetry(() =>
+          player.play(channel, resolvedUrl, {
+            requestedBy: interaction.user,
+            nodeOptions: playerNodeOptions(interaction.channel),
+          }),
+        );
 
         await interaction.followUp(`Queued: **${trackTitle(result.track)}**`);
       } catch (error) {
@@ -737,10 +762,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
         return;
       }
 
-      const result = await player.play(channel, related, {
-        requestedBy: interaction.user,
-        nodeOptions: playerNodeOptions(interaction.channel),
-      });
+      const result = await withRetry(() =>
+        player.play(channel, related, {
+          requestedBy: interaction.user,
+          nodeOptions: playerNodeOptions(interaction.channel),
+        }),
+      );
 
       await interaction.followUp(
         `Related to **${trackTitle(seed)}** — queued: **${trackTitle(result.track)}**`,
