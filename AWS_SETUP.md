@@ -28,19 +28,24 @@ This guide is for running TunezBot on an AWS EC2 instance so your Windows PC and
 
 ## 3. Connect To The Instance
 
-Move the downloaded key somewhere permanent, e.g. `~/.ssh/tunezbot-key.pem`.
-
-On Windows, restrict the key's permissions so SSH will accept it:
+Move the downloaded key somewhere permanent:
 
 ```powershell
-icacls "~/.ssh/tunezbot-key.pem" /inheritance:r
-icacls "~/.ssh/tunezbot-key.pem" /grant:r "$($env:USERNAME):(R)"
+mkdir -Force "$env:USERPROFILE\.ssh"
+Move-Item "$env:USERPROFILE\Downloads\tunezbot-key.pem" "$env:USERPROFILE\.ssh\tunezbot-key.pem"
+```
+
+On Windows, restrict the key's permissions so SSH will accept it. Use `$env:USERPROFILE`, not `~` — `icacls` is a plain Windows executable and does not expand `~` as your home folder the way PowerShell cmdlets do:
+
+```powershell
+icacls "$env:USERPROFILE\.ssh\tunezbot-key.pem" /inheritance:r
+icacls "$env:USERPROFILE\.ssh\tunezbot-key.pem" /grant:r "$($env:USERNAME):(R)"
 ```
 
 Then connect from PowerShell:
 
 ```powershell
-ssh -i ~/.ssh/tunezbot-key.pem ubuntu@<public_ip>
+ssh -i "$env:USERPROFILE\.ssh\tunezbot-key.pem" ubuntu@<public_ip>
 ```
 
 (Username is `ubuntu` for the Ubuntu AMI.)
