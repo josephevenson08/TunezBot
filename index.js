@@ -215,6 +215,43 @@ function normalizePlayQuery(query) {
   return normalized;
 }
 
+// Search YouTube via yt-dlp instead of the extractor's own search. YouTube's search API
+// (used internally by the extractor) gets blocked on datacenter/cloud IPs far more
+// readily than plain yt-dlp lookups do, so this keeps search working when hosted there.
+async function searchYoutube(query, count = 1) {
+  const output = await youtubeDl(`ytsearch${count}:${query}`, {
+    dumpSingleJson: true,
+    flatPlaylist: true,
+    noWarnings: true,
+    noProgress: true,
+  });
+
+  const parsed = typeof output === 'string' ? JSON.parse(output) : output;
+  const entries = parsed.entries || [];
+
+  return entries
+    .filter((entry) => entry && entry.id)
+    .map((entry) => `https://www.youtube.com/watch?v=${entry.id}`);
+}
+
+// Turn a /tplay or /tqueue query into a playable URL: pass real links through as-is,
+// otherwise resolve plain search text to a URL via searchYoutube.
+async function resolveToUrl(rawQuery) {
+  const normalized = normalizePlayQuery(rawQuery);
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  const [url] = await searchYoutube(normalized, 1);
+
+  if (!url) {
+    throw new Error('No results found for that search.');
+  }
+
+  return url;
+}
+
 // Discord Player stores queued songs in a custom queue object, so normalize it to an array.
 function queuedTracks(queue) {
   if (typeof queue.tracks.toArray === 'function') {
@@ -254,14 +291,12 @@ async function playArtistTrack(queue, artist) {
 
   // Vary the search phrase a little so artist mode does not always get the same result.
   const query = searchTerms[Math.floor(Math.random() * searchTerms.length)];
-  const searchResult = await player.search(query);
+  const urls = await searchYoutube(query, 8);
 
   // Avoid repeating a song this guild already heard this session, if a fresh option exists.
-  // Track.id is freshly generated per search call (even for the same video), so
-  // Track.url (which embeds the real YouTube video ID) is the only stable key here.
   const recentUrls = new Set(getSessionHistory(queue.guild.id).map((track) => track.url));
-  const fresh = searchResult.tracks.filter((track) => !recentUrls.has(track.url));
-  const pool = fresh.length > 0 ? fresh : searchResult.tracks;
+  const fresh = urls.filter((url) => !recentUrls.has(url));
+  const pool = fresh.length > 0 ? fresh : urls;
 
   if (pool.length < 1) {
     return null;
@@ -269,7 +304,7 @@ async function playArtistTrack(queue, artist) {
 
   const chosen = pool[Math.floor(Math.random() * Math.min(pool.length, 8))];
 
-  const result = await player.play(channel, chosen.url, {
+  const result = await player.play(channel, chosen, {
     nodeOptions: playerNodeOptions(queue.metadata),
   });
 
@@ -288,13 +323,9 @@ async function findRelatedTrack(guildId, seedTrack) {
   const author = seedTrack.author || seedTrack.title;
   const template = RELATED_SEARCH_TEMPLATES[Math.floor(Math.random() * RELATED_SEARCH_TEMPLATES.length)];
 
-  const result = await player.search(template(author));
-  // Track.url (which embeds the real YouTube video ID) is stable across search
-  // calls; Track.id is not, so it can't be used to detect repeats here.
+  const urls = await searchYoutube(template(author), 8);
   const recentUrls = new Set(getSessionHistory(guildId).map((track) => track.url));
-  const candidates = result.tracks.filter(
-    (track) => track.url !== seedTrack.url && !recentUrls.has(track.url),
-  );
+  const candidates = urls.filter((url) => url !== seedTrack.url && !recentUrls.has(url));
 
   if (candidates.length < 1) {
     return null;
@@ -342,7 +373,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await interaction.deferReply();
 
     try {
-      const query = normalizePlayQuery(interaction.options.getString('query', true));
+      const query = await resolveToUrl(interaction.options.getString('query', true));
       const existingQueue = getQueue(interaction);
       const preservedTracks =
         existingQueue && !existingQueue.deleted ? queuedTracks(existingQueue) : [];
@@ -386,7 +417,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await interaction.deferReply();
 
     try {
-      const result = await player.play(channel, `${artist} official audio`, {
+      const [artistUrl] = await searchYoutube(`${artist} official audio`, 1);
+
+      if (!artistUrl) {
+        throw new Error('No results found for that artist.');
+      }
+
+      const result = await player.play(channel, artistUrl, {
         requestedBy: interaction.user,
         nodeOptions: playerNodeOptions(interaction.channel),
       });
@@ -437,7 +474,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferReply();
 
       try {
-        const result = await player.play(channel, normalizePlayQuery(query), {
+        const result = await player.play(channel, await resolveToUrl(query), {
           requestedBy: interaction.user,
           nodeOptions: playerNodeOptions(interaction.channel),
         });
@@ -700,7 +737,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         return;
       }
 
-      const result = await player.play(channel, related.url, {
+      const result = await player.play(channel, related, {
         requestedBy: interaction.user,
         nodeOptions: playerNodeOptions(interaction.channel),
       });
