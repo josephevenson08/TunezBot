@@ -104,12 +104,15 @@ Open the generated URL and choose your server. You need permission to add apps/b
 
 ## 5. Register commands and run
 
-From this folder:
+Requires Node.js 18 or newer. From this folder:
 
 ```powershell
+npm install
 npm run deploy
 npm start
 ```
+
+`npm install` only needs to be run once, or again after pulling changes that touch `package.json`.
 
 Run `npm run deploy` when slash commands are added or changed. You do not need it every time.
 
