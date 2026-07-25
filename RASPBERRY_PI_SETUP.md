@@ -13,4 +13,8 @@ YouTube's bot-detection treats requests from datacenter IP ranges (AWS, Oracle C
 - Raspberry Pi 4 Model B/1GB (1)
 - USB-C Power Supply, 5.1V 3.0A, Black, UL Listed (1)
 
+## Where did I order from?
+- I tried ordering off amazon but the were sold out so the list above is in reference to https://www.pishop.us/
+- I went with this site because nothing was availablr on amazon at the time, you can order whatever you want, just double check compatiability between parts and make sure you get enough hardware capability for what you are going to use it for, since this project will not be drawing out usage so much, this is why I went with what I went.
+
 ## Whats next? Instructions still WiP, will fill out as i do the set up
