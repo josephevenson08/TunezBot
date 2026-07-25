@@ -149,4 +149,5 @@ npm update
 
 Your `.env` file contains your private bot token and should not be shared.
 
-## Head over to Raspberry Pi Setup to see the parts and how I set up the hardware required to get this project working in real time.
+## Where to go next?
+- Head over to Raspberry Pi Setup to see the parts and how I set up the hardware required to get this project working in real time.
