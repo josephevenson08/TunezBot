@@ -1,0 +1,381 @@
+<title>TunezBot — Local Signal Flow</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+  <symbol id="i-power" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="10"/><path d="M6.5 6.5A8 8 0 1 0 17.5 6.5"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.3"/><line x1="10.3" y1="10.3" x2="19" y2="19"/><line x1="15.6" y1="14.6" x2="18" y2="12.2"/><line x1="17" y1="16.6" x2="19.4" y2="14.2"/></symbol>
+  <symbol id="i-bubble" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2.4"/><polyline points="8,17 8,21 13,17"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21.5"/><line x1="8" y1="21.5" x2="16" y2="21.5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.4" cy="10.4" r="6.4"/><line x1="15.1" y1="15.1" x2="21" y2="21"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M4.5 11.2a11 11 0 0 1 15 0"/><path d="M7.6 14.6a6.8 6.8 0 0 1 8.8 0"/><circle cx="12" cy="18.2" r="1.3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-broadcast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/><path d="M8.6 8.6a5.2 5.2 0 0 0 0 6.8"/><path d="M15.4 8.6a5.2 5.2 0 0 1 0 6.8"/><path d="M5.6 5.6a9.4 9.4 0 0 0 0 12.8"/><path d="M18.4 5.6a9.4 9.4 0 0 1 0 12.8"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="4"/><polygon points="10,9.5 10,14.5 15,12" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M4.2 12a7.8 7.8 0 0 1 13.2-5.6"/><polyline points="17,2.8 17,6.8 13,6.8"/><path d="M19.8 12a7.8 7.8 0 0 1-13.2 5.6"/><polyline points="7,21.2 7,17.2 11,17.2"/></symbol>
+  <symbol id="i-package" viewBox="0 0 24 24"><polygon points="12,3 21,7.5 21,16.5 12,21 3,16.5 3,7.5"/><polyline points="3,7.5 12,12 21,7.5"/><line x1="12" y1="12" x2="12" y2="21"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></symbol>
+</defs>
+</svg>
+
+<div class="page">
+
+  <header class="hero">
+    <p class="eyebrow">TunezBot &middot; Local Runtime</p>
+    <h1>How It Runs, Locally</h1>
+  </header>
+
+  <nav class="phasebar" aria-label="Process phases">
+    <span class="phase"><svg><use href="#i-key"/></svg>Setup</span>
+    <span class="arrow">&rarr;</span>
+    <span class="phase"><svg><use href="#i-power"/></svg>Boot</span>
+    <span class="arrow">&rarr;</span>
+    <span class="phase"><svg><use href="#i-bubble"/></svg>Command loop</span>
+    <span class="arrow">&rarr;</span>
+    <span class="phase"><svg><use href="#i-db"/></svg>Background</span>
+  </nav>
+
+  <div class="sankey-scroll">
+  <section class="sankey">
+    <svg id="ribbon-svg" class="ribbons" aria-hidden="true">
+      <defs>
+        <filter id="glow-blur" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="6"/>
+        </filter>
+      </defs>
+      <defs id="dyn-defs"></defs>
+      <g id="ribbon-layer"></g>
+    </svg>
+
+    <div class="col col-src">
+      <div class="card card-src" id="src">
+        <span class="icon-chip icon-chip-dark"><svg><use href="#i-power"/></svg></span>
+        <h2>npm start</h2>
+        <p>One Node process,<br/>one PC, one terminal</p>
+      </div>
+    </div>
+
+    <div class="col col-mid">
+      <div class="card card-mid" id="m1">
+        <span class="icon-chip"><svg><use href="#i-bubble"/></svg></span>
+        <p class="k-label">Slash commands</p>
+        <p class="k-big">16</p>
+        <p class="k-sub">/t&hellip; commands, one router</p>
+      </div>
+      <div class="card card-mid" id="m2">
+        <span class="icon-chip"><svg><use href="#i-mic"/></svg></span>
+        <p class="k-label">Voice playback</p>
+        <p class="k-big">5 min</p>
+        <p class="k-sub">idle &rarr; bot auto&#8209;leaves</p>
+      </div>
+      <div class="card card-mid" id="m3">
+        <span class="icon-chip"><svg><use href="#i-search"/></svg></span>
+        <p class="k-label">Search &amp; stream</p>
+        <p class="k-big">yt-dlp</p>
+        <p class="k-sub">not the extractor's own search</p>
+      </div>
+    </div>
+
+    <div class="col col-end">
+      <div class="card card-end" id="r1">
+        <span class="icon-chip"><svg><use href="#i-wifi"/></svg></span>
+        <p class="k-label">Discord Gateway</p>
+        <p class="k-big">WebSocket</p>
+        <p class="k-sub">events &amp; replies</p>
+      </div>
+      <div class="card card-end" id="r2">
+        <span class="icon-chip"><svg><use href="#i-broadcast"/></svg></span>
+        <p class="k-label">Discord Voice</p>
+        <p class="k-big">UDP</p>
+        <p class="k-sub">live audio, in your channel</p>
+      </div>
+      <div class="card card-end" id="r3">
+        <span class="icon-chip"><svg><use href="#i-play"/></svg></span>
+        <p class="k-label">YouTube</p>
+        <p class="k-big">HTTPS</p>
+        <p class="k-sub">resolved outside Discord</p>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <section class="stats">
+    <div class="stat">
+      <span class="stat-icon"><svg><use href="#i-clock"/></svg></span>
+      <p class="stat-num">3s</p>
+      <p class="stat-label">Presence refresh</p>
+    </div>
+    <div class="stat">
+      <span class="stat-icon"><svg><use href="#i-refresh"/></svg></span>
+      <p class="stat-num">1&times;</p>
+      <p class="stat-label">Retry on failed stream</p>
+    </div>
+    <div class="stat">
+      <span class="stat-icon"><svg><use href="#i-package"/></svg></span>
+      <p class="stat-num">8</p>
+      <p class="stat-label">npm dependencies</p>
+    </div>
+  </section>
+
+  <p class="footnote">Closing the terminal, sleeping the PC, or losing internet takes the bot offline &mdash; a Raspberry Pi version is next.</p>
+
+</div>
+
+<style>
+  :root{
+    --bg-1:#eef1fa;
+    --bg-2:#e4e9f8;
+    --ink:#10173f;
+    --muted:#6b7290;
+    --card:#ffffff;
+    --line:#dbe0f2;
+    --pink-1:#ff8fb6;
+    --pink-2:#ee4a90;
+    --violet-1:#7d6cf3;
+    --violet-2:#3960e8;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:linear-gradient(180deg,var(--bg-1),var(--bg-2));
+    color:var(--ink);
+    font-family:"Segoe UI", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .page{max-width:1180px;margin:0 auto;padding:56px 24px 60px;}
+
+  /* header */
+  .hero{text-align:center;margin-bottom:26px;}
+  .eyebrow{
+    margin:0 0 8px;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.05em;
+    color:var(--muted);
+  }
+  h1{
+    margin:0;
+    font-size:clamp(30px,4.6vw,46px);
+    font-weight:800;
+    letter-spacing:-.01em;
+    text-wrap:balance;
+  }
+
+  /* phase bar */
+  .phasebar{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin:0 0 30px;
+  }
+  .phase{
+    display:flex;align-items:center;gap:7px;
+    font-size:13px;font-weight:600;color:var(--ink);
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:7px 14px;
+  }
+  .phase svg{width:14px;height:14px;color:var(--violet-2);flex:none;}
+  .phasebar .arrow{color:var(--muted);font-size:14px;}
+
+  /* sankey */
+  .sankey-scroll{overflow-x:auto;padding:4px 0 8px;}
+  .sankey{
+    position:relative;
+    width:1080px;
+    max-width:none;
+    margin:0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:0;
+    padding:20px 0 34px;
+    opacity:0;
+    transition:opacity .5s ease;
+  }
+  .sankey.is-ready{opacity:1;}
+  .ribbons{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:visible;}
+
+  .col{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center;gap:26px;}
+  .col-src{width:230px;}
+  .col-mid{width:250px;}
+  .col-end{width:250px;}
+
+  .card{border-radius:22px;padding:20px 22px;}
+  .icon-chip{
+    width:38px;height:38px;border-radius:11px;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.28);
+    margin-bottom:12px;
+  }
+  .icon-chip svg{width:19px;height:19px;color:#fff;}
+  .icon-chip-dark{background:var(--ink);}
+  .icon-chip-dark svg{color:#fff;}
+
+  .card-src{
+    background:var(--card);
+    border:1px solid var(--line);
+    box-shadow:0 20px 36px -18px rgba(16,23,63,.28);
+  }
+  .card-src h2{margin:0 0 6px;font-size:20px;font-weight:800;}
+  .card-src p{margin:0;color:var(--muted);font-size:13px;line-height:1.4;}
+
+  .card-mid{
+    background:linear-gradient(135deg,var(--pink-1),var(--pink-2));
+    color:#fff;
+    box-shadow:0 20px 34px -16px rgba(238,74,144,.55);
+  }
+  .card-end{
+    background:linear-gradient(135deg,var(--violet-1),var(--violet-2));
+    color:#fff;
+    box-shadow:0 20px 34px -16px rgba(57,96,232,.55);
+  }
+  .k-label{margin:0 0 4px;font-size:13px;opacity:.9;}
+  .k-big{
+    margin:0 0 4px;
+    font-size:clamp(24px,2.6vw,30px);
+    font-weight:800;
+    letter-spacing:-.01em;
+    font-variant-numeric:tabular-nums;
+  }
+  .k-sub{margin:0;font-size:12.5px;opacity:.85;line-height:1.35;}
+
+  /* bottom stats */
+  .stats{
+    display:flex;
+    justify-content:center;
+    gap:clamp(28px,6vw,72px);
+    flex-wrap:wrap;
+    margin:10px 0 30px;
+    text-align:center;
+  }
+  .stat-icon{
+    width:44px;height:44px;
+    border-radius:13px;
+    background:var(--card);
+    border:1px solid var(--line);
+    display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:0 10px 22px -14px rgba(16,23,63,.35);
+    margin-bottom:10px;
+  }
+  .stat-icon svg{width:20px;height:20px;color:var(--violet-2);}
+  .stat-num{margin:0 0 2px;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .stat-label{margin:0;font-size:12.5px;color:var(--muted);}
+
+  .footnote{
+    text-align:center;
+    max-width:56ch;
+    margin:0 auto;
+    color:var(--muted);
+    font-size:12.5px;
+  }
+
+  @media (prefers-reduced-motion: no-preference){
+    .card{transition:transform .25s ease;}
+    .card:hover{transform:translateY(-3px);}
+  }
+
+  @media (max-width:640px){
+    .page{padding:40px 16px 48px;}
+    .stats{gap:22px;}
+  }
+</style>
+
+<script>
+(function(){
+  var svgNS = "http://www.w3.org/2000/svg";
+  var container = document.querySelector(".sankey");
+  var svg = document.getElementById("ribbon-svg");
+  var dynDefs = document.getElementById("dyn-defs");
+  var layer = document.getElementById("ribbon-layer");
+
+  var RIBBONS = [
+    { from:"#src", to:"#m1", fromY:0.5,  toY:0.5,  c1:"#ffffff", c2:"#ee4a90" },
+    { from:"#src", to:"#m2", fromY:0.5,  toY:0.5,  c1:"#ffffff", c2:"#ee4a90" },
+    { from:"#src", to:"#m3", fromY:0.5,  toY:0.5,  c1:"#ffffff", c2:"#ee4a90" },
+    { from:"#m1",  to:"#r1", fromY:0.5,  toY:0.5,  c1:"#ee4a90", c2:"#3960e8" },
+    { from:"#m2",  to:"#r2", fromY:0.5,  toY:0.36, c1:"#ee4a90", c2:"#3960e8" },
+    { from:"#m3",  to:"#r2", fromY:0.42, toY:0.68, c1:"#ee4a90", c2:"#3960e8" },
+    { from:"#m3",  to:"#r3", fromY:0.68, toY:0.5,  c1:"#ee4a90", c2:"#3960e8" }
+  ];
+
+  function computeRibbons(){
+    if(!container || !svg) return;
+    var crect = container.getBoundingClientRect();
+    if(crect.width === 0) return;
+
+    svg.setAttribute("width", crect.width);
+    svg.setAttribute("height", crect.height);
+    svg.setAttribute("viewBox", "0 0 " + crect.width + " " + crect.height);
+
+    while (dynDefs.firstChild) dynDefs.removeChild(dynDefs.firstChild);
+    while (layer.firstChild) layer.removeChild(layer.firstChild);
+
+    RIBBONS.forEach(function(r, i){
+      var fromEl = document.querySelector(r.from);
+      var toEl = document.querySelector(r.to);
+      if(!fromEl || !toEl) return;
+      var fr = fromEl.getBoundingClientRect();
+      var tr = toEl.getBoundingClientRect();
+
+      var x0 = fr.right - crect.left - 10;
+      var y0 = fr.top - crect.top + fr.height * r.fromY;
+      var x1 = tr.left - crect.left + 10;
+      var y1 = tr.top - crect.top + tr.height * r.toY;
+      var dx = Math.max((x1 - x0) * 0.5, 30);
+      var d = "M " + x0 + " " + y0 + " C " + (x0 + dx) + " " + y0 + ", " + (x1 - dx) + " " + y1 + ", " + x1 + " " + y1;
+
+      var gid = "rib-grad-" + i;
+      var grad = document.createElementNS(svgNS, "linearGradient");
+      grad.setAttribute("id", gid);
+      grad.setAttribute("gradientUnits", "userSpaceOnUse");
+      grad.setAttribute("x1", x0); grad.setAttribute("y1", y0);
+      grad.setAttribute("x2", x1); grad.setAttribute("y2", y1);
+      var s0 = document.createElementNS(svgNS, "stop");
+      s0.setAttribute("offset", "0"); s0.setAttribute("stop-color", r.c1); s0.setAttribute("stop-opacity", "0.85");
+      var s1 = document.createElementNS(svgNS, "stop");
+      s1.setAttribute("offset", "1"); s1.setAttribute("stop-color", r.c2); s1.setAttribute("stop-opacity", "0.85");
+      grad.appendChild(s0); grad.appendChild(s1);
+      dynDefs.appendChild(grad);
+
+      var glow = document.createElementNS(svgNS, "path");
+      glow.setAttribute("d", d);
+      glow.setAttribute("fill", "none");
+      glow.setAttribute("stroke", "url(#" + gid + ")");
+      glow.setAttribute("stroke-width", "30");
+      glow.setAttribute("stroke-linecap", "round");
+      glow.setAttribute("opacity", "0.16");
+      glow.setAttribute("filter", "url(#glow-blur)");
+      layer.appendChild(glow);
+
+      var path = document.createElementNS(svgNS, "path");
+      path.setAttribute("d", d);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "url(#" + gid + ")");
+      path.setAttribute("stroke-width", "13");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("opacity", "0.92");
+      layer.appendChild(path);
+    });
+
+    container.classList.add("is-ready");
+  }
+
+  var raf = null;
+  function scheduleCompute(){
+    if(raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(computeRibbons);
+  }
+
+  document.addEventListener("DOMContentLoaded", computeRibbons);
+  window.addEventListener("load", scheduleCompute);
+  window.addEventListener("resize", scheduleCompute);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(scheduleCompute); }
+})();
+</script>
