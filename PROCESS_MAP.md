@@ -69,4 +69,6 @@ Asked whether the bot could be hosted the same way as the landing page. Answer: 
 
 ---
 
-*Next entry goes here when the next decision gets made.*
+**Late July 2026**
+Got the parts ordered from pishop.usa, list of which is in the Raspberry pi setup file. Cleaned up wording format as well as cleaned up entire project environment. Deleted the generated site html file after revisiting what the purpose of this project was, and that is to review and refresh on this process of making a project, not generating content. once i have a outline of what i want the site to look like, which will bring people to the TunezBot repo, i will upload it here so that i can show what my thought process was, most likely it will be a word document paired with a sketch picture of the schematic of the website.
+- plans going forward for the rest of july are as follows, 1. revisit the tunezbot code and make sure comments are up to date. 2. make sure that I have planned out what I want the html site to look like and have it uploaded to the github before i start. 3. update the raspberry_pi_setup as I do the setup once the parts get in. 4. testing launch setup for connection of raspberry pi to the tunezbot code import. 5. keep adding to this file to show thought process.
