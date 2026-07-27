@@ -241,9 +241,9 @@
       txtEl.textContent = full.slice(0, i);
       if(i < full.length){
         var ch = full[i - 1];
-        var delay = 5 + Math.random() * 10;
-        if(ch === ",") delay += 45;
-        if(ch === "." || ch === "—" || ch === ":") delay += 50;
+        var delay = 5 + Math.random() * 8;
+        if(ch === ",") delay += 40;
+        if(ch === "." || ch === "—" || ch === ":") delay += 40;
         setTimeout(step, delay);
       } else {
         el.classList.remove("is-typing");
