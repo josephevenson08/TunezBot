@@ -6,7 +6,7 @@ const { Player, GuildQueueEvent, QueueRepeatMode } = require('discord-player');
 const { YoutubeExtractor } = require('discord-player-youtubei');
 const youtubeDl = require('youtube-dl-exec');
 
-// Pull the bot token from .env so it is not hard-coded in the source code.
+// Pull the bot token from .env.example so it is not hard-coded in the executable source code.
 const { DISCORD_TOKEN } = process.env;
 
 if (!DISCORD_TOKEN) {
