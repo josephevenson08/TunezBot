@@ -25,7 +25,9 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-// Create the Discord client. GuildVoiceStates is required for voice channel/music features.
+// Create the Discord client. 
+// GatewayIntentBits.Guilds is used for explicitly giving the bot permission to access channels, roles, and actions.
+// GatewayIntentBits.GuildVoiceStates is required for voice channel/music features like connection and disconnection.
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
 });
