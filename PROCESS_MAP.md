@@ -78,3 +78,15 @@ Got the parts ordered from pishop.usa, list of which is in the Raspberry pi setu
 - This includes the first 11 steps in the Raspberry_Pi_Setup document.
 - Going forward: once I am back on my own internet I will continue the project and update the setup file accordingly.
 - Also researched the safest shutdown method once i had the pi up and running and the line i learned was  "sudo shutdown -h now".
+
+**July 28 comment and code revamp in index.js up to LOC 53**
+- .env.example — added a comment telling setup users to fill in their own info; noted the file will be blank on pull so secrets stay out of git.
+- index.js — revamped the comment on pulling DISCORD_TOKEN from .env.example.
+- index.js — added a comment on the DISCORD_TOKEN presence check.
+- index.js — reworded "unhandled" → "unknown" for the rejection handler, and revamped the comment to explain the console log behavior on unknown errors.
+- index.js — expanded the comment on Discord client creation to explain how GatewayIntentBits are used.
+- index.js — added a comment on the per-guild state maps, clarifying instances don't share state.
+- index.js — revamped the comment on the play-history array creation (getSessionHistory).
+- index.js — added a "leave-off marker" comment noting where you paused the comment-revision pass for 7/28.
+- assets/pixilart-drawing.png — added a new bot icon concept drawn in external software.
+- Finally, of course, reviewed everything again to make sure i did it correctly including this documentation here.
