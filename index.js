@@ -36,6 +36,7 @@ const client = new Client({
 const player = new Player(client);
 
 // Per-guild state, all keyed by guild ID so multiple servers never share state.
+// Used to store per instance states
 const activityIntervals = new Map();
 const sessionHistories = new Map();
 const artistModes = new Map();
