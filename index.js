@@ -41,7 +41,8 @@ const activityIntervals = new Map();
 const sessionHistories = new Map();
 const artistModes = new Map();
 
-// Get (and lazily create) the play history array for a guild.
+// Get (and lazily create) the play history array for a guild/discord server. 
+// Useful to allow users to do repetitive actions for the bot.
 function getSessionHistory(guildId) {
   if (!sessionHistories.has(guildId)) {
     sessionHistories.set(guildId, []);
