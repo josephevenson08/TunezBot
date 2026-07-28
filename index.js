@@ -9,6 +9,7 @@ const youtubeDl = require('youtube-dl-exec');
 // Pull the bot token from .env.example so it is not hard-coded in the executable source code.
 const { DISCORD_TOKEN } = process.env;
 
+// check to make sure that the DISCORD_TOKEN is present in the .env.example file, if not, present an error to the end user and exit out of process with a log.
 if (!DISCORD_TOKEN) {
   console.error('Missing DISCORD_TOKEN in .env');
   process.exit(1);
