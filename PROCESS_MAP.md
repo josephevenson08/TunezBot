@@ -75,5 +75,6 @@ Got the parts ordered from pishop.usa, list of which is in the Raspberry pi setu
 
 **July 27**
 - started updating the Raspberry pi setup file when I got my parts delivered. Got as far as I could on a different internet position. I cleaned and wrote the SD card, assembled the case and inserted the written SD card into the board. Also was able to get a successful turn on. Had to stop when i got to the SSH position of transferring files over to the raspberry pi board when I was not on my own internet. 
+- This includes the first 11 steps in the Raspberry_Pi_Setup document.
 - Going forward: once I am back on my own internet I will continue the project and update the setup file accordingly.
 - Also researched the safest shutdown method once i had the pi up and running and the line i learned was  "sudo shutdown -h now".
