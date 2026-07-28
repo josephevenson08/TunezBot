@@ -15,9 +15,9 @@ if (!DISCORD_TOKEN) {
   process.exit(1);
 }
 
-// Log unexpected errors instead of failing silently or crashing with no context.
-process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled promise rejection:', reason);
+// Log any other errors instead of having no reasonable output, useful for troubleshooting.
+process.on('unknownRejection', (reason) => {
+  console.error('Unknown rejection:', reason);
 });
 
 process.on('uncaughtException', (error) => {
