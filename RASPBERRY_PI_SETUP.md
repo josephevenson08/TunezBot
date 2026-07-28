@@ -40,5 +40,5 @@ YouTube's bot-detection treats requests from datacenter IP ranges (AWS, Oracle C
 8. Put the board into the case that was ordered and put the lid to the case back on.
 9. Plug the ethernet into the ethernet port.
 10. Plug in the USB-C power supply and wait around 2 minutes to get a fully boot or at least thats what I did.
-11. I opened powershell on your windows PC and typed in ssh myusername@tunezbot.local
+11. I opened powershell on your windows PC and typed in "ssh myusername@tunezbot.local", fill in yhe "myusername" with the username you set.
 - STOPPED HERE DUE TO NOT BEING ON OWN NETWORK
