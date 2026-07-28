@@ -50,6 +50,7 @@ function getSessionHistory(guildId) {
 
   return sessionHistories.get(guildId);
 }
+// ------------------------------------------left off here on 7/28------------------------------------------
 
 // Use yt-dlp to get a direct playable YouTube audio stream.
 async function createYoutubeStream(track) {
