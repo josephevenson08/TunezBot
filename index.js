@@ -68,21 +68,20 @@ async function createYoutubeStream(track) {
 
 // Music player events handle messages and bot status while tracks play.
 player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
-  queue.metadata?.send(`Now playing: **${track.cleanTitle || track.title}**`).catch(() => {}); 
+  queue.metadata?.send(`Now playing: **${track.cleanTitle || track.title}**`).catch(() => {}); // custom message attached
 
-  const guildId = queue.guild.id;
-  const history = getSessionHistory(guildId);
-  history.push(track);
-  sessionHistories.set(guildId, history.slice(-50));//prevent it from growing forever
+  const guildId = queue.guild.id; // gets guildID
+  const history = getSessionHistory(guildId); // gets the history for the guild from the array
+  history.push(track); // append the new track to the end of the array
+  sessionHistories.set(guildId, history.slice(-50));// prevent it from growing forever
 
-  updateBotActivity(queue);
-
-  clearInterval(activityIntervals.get(guildId));
+  updateBotActivity(queue); 
+  clearInterval(activityIntervals.get(guildId)); 
   activityIntervals.set(
     guildId,
     setInterval(() => {
       updateBotActivity(queue);
-    }, 3000),
+    }, 3000), 
   );
 });
 
