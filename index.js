@@ -95,17 +95,18 @@ player.events.on(GuildQueueEvent.EmptyQueue, async (queue) => {
   // If artist mode is on, keep finding songs by that artist instead of ending.
   const artist = artistModes.get(queue.guild.id);
 
+  // for artist mode, continues to play tracks by the same artist up until the user stops.
   if (artist) {
     try {
       const track = await playArtistTrack(queue, artist);
-
+      // repeats same nature from before
       if (track) {
         queue.metadata?.send(`Artist mode: **${trackTitle(track)}**`).catch(() => {});
         return;
       }
     } catch (error) {
-      console.error(error);
-      queue.metadata?.send(`Artist mode could not find another **${artist}** song.`).catch(() => {});
+      console.error(error); // reports error to console
+      queue.metadata?.send(`Artist mode could not find another **${artist}** song.`).catch(() => {}); // catch for when the bot cant find another song to play by the artist
     }
   }
 
