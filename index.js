@@ -109,6 +109,7 @@ player.events.on(GuildQueueEvent.EmptyQueue, async (queue) => {
       queue.metadata?.send(`Artist mode could not find another **${artist}** song.`).catch(() => {}); // catch for when the bot cant find another song to play by the artist
     }
   }
+// ------------------------------------------left off here on 7/29------------------------------------------
 
   queue.metadata?.send('Queue finished.').catch(() => {});
 
