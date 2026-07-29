@@ -52,21 +52,23 @@ function getSessionHistory(guildId) {
 }
 // ------------------------------------------left off here on 7/28------------------------------------------
 
-// Use yt-dlp to get a direct playable YouTube audio stream.
+// Use yt-dlp to get a direct playable YouTube audio stream
+// yt-dlp is used to extract media from youtube, in this case, and return it without downloading the file.
 async function createYoutubeStream(track) {
-  const output = await youtubeDl(track.url, {
-    getUrl: true,
-    format: track.live ? 'best[height<=360]' : 'bestaudio',
-    noWarnings: true,
-    noProgress: true,
+  const output = await youtubeDl(track.url, { 
+    getUrl: true, // get url
+    format: track.live ? 'best[height<=360]' : 'bestaudio', //grabs audio-only stream, doesnt need a video stream, that would be extra data
+    noWarnings: true, //no warnings, don't need to see it
+    noProgress: true, //same reason as noWarnings
   });
 
-  return String(output).trim().split(/\r?\n/)[0];
+  // converts into a string, whitespaces reduced, and splits on new line.
+  return String(output).trim().split(/\r?\n/)[0]; 
 }
 
 // Music player events handle messages and bot status while tracks play.
 player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
-  queue.metadata?.send(`Now playing: **${track.cleanTitle || track.title}**`).catch(() => {});
+  queue.metadata?.send(`Now playing: **${track.cleanTitle || track.title}**`).catch(() => {}); 
 
   const guildId = queue.guild.id;
   const history = getSessionHistory(guildId);
