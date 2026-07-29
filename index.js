@@ -86,8 +86,9 @@ player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
   );
 });
 
+// useful for youtube playlists, not just a singular url track
 player.events.on(GuildQueueEvent.AudioTracksAdd, (queue, tracks) => {
-  queue.metadata?.send(`Queued **${tracks.length}** tracks.`).catch(() => {});
+  queue.metadata?.send(`Queued **${tracks.length}** tracks.`).catch(() => {}); // tells how many tracks were added, + ignores failed message send instead of crashing the bot.
 });
 
 player.events.on(GuildQueueEvent.EmptyQueue, async (queue) => {
