@@ -75,13 +75,14 @@ player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
   history.push(track); // append the new track to the end of the array
   sessionHistories.set(guildId, history.slice(-50));// prevent it from growing forever
 
-  updateBotActivity(queue); 
-  clearInterval(activityIntervals.get(guildId)); 
+  updateBotActivity(queue); // updates bot activity to show the current track, not dependent on the interval set for updating 
+
+  clearInterval(activityIntervals.get(guildId)); // if it exists, clears the interval
   activityIntervals.set(
     guildId,
     setInterval(() => {
       updateBotActivity(queue);
-    }, 3000), 
+    }, 3000), // this is the interval i was talking about, every 3 seconds it will update the bot activity to show the progress bar and the current track on this discord page for the bot.
   );
 });
 
