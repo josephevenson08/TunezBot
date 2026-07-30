@@ -546,20 +546,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  // loop current song
   if (commandName === 'tloop') {
     if (!queue.currentTrack) {
-      await interaction.reply('Nothing is playing right now');
+      await interaction.reply('Nothing is playing right now'); //check if nothing is playing
       return;
     }
 
     queue.setRepeatMode(QueueRepeatMode.TRACK);
-    await interaction.reply(`Looping **${trackTitle(queue.currentTrack)}**`);
+    await interaction.reply(`Looping **${trackTitle(queue.currentTrack)}**`); //show what song is being looped
     return;
   }
 
+  // stop looping current song
   if (commandName === 'tstoploop') {
     queue.setRepeatMode(QueueRepeatMode.OFF);
-    await interaction.reply('Loop stopped. The queue will continue after this song.');
+    await interaction.reply('Loop stopped. The queue will continue after this song.'); 
     return;
   }
 
