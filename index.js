@@ -565,6 +565,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  // tskip function, skips current song playing
   if (commandName === 'tskip') {
     const artist = artistModes.get(interaction.guildId);
 
