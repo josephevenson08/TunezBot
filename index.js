@@ -601,12 +601,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  // replay function, if song ends and we want to replay the song, this does it. nothing can be queued 
   if (commandName === 'treplay') {
     // Replay the previous song from Discord Player's history.
     const previous = queue.history.previousTrack;
 
     if (!previous) {
-      await interaction.reply('There is no previous track to replay.');
+      await interaction.reply('There is no previous track to replay.'); //catch
       return;
     }
 
@@ -614,10 +615,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     try {
       await queue.history.previous(false);
-      await interaction.followUp(`Replaying: **${trackTitle(previous)}**`);
+      await interaction.followUp(`Replaying: **${trackTitle(previous)}**`); //showing what is replayed
     } catch (error) {
       console.error(error);
-      await interaction.followUp(`Could not replay that: ${error.message}`);
+      await interaction.followUp(`Could not replay that: ${error.message}`); //error log for replaying
     }
 
     return;
