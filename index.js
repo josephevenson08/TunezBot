@@ -582,15 +582,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const track = await playArtistTrack(queue, artist);
 
         if (!track) {
-          await interaction.followUp(`Could not find another **${artist}** song to skip to.`);
+          await interaction.followUp(`Could not find another **${artist}** song to skip to.`); //catch
           return;
         }
 
         queue.node.skip();
-        await interaction.followUp(`Skipped. Artist mode: **${trackTitle(track)}**`);
+        await interaction.followUp(`Skipped. Artist mode: **${trackTitle(track)}**`); //shown what is skipped
       } catch (error) {
         console.error(error);
-        await interaction.followUp(`Could not find another **${artist}** song: ${error.message}`);
+        await interaction.followUp(`Could not find another **${artist}** song: ${error.message}`); //fallback
       }
 
       return;
