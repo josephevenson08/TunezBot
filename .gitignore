@@ -1,3 +1,12 @@
 node_modules/
 .env
 npm-debug.log*
+
+# Build/upload artifacts
+tunezbot-site.zip
+
+# Obsidian: the vault lives in TunezBot-Brain/, and its shared config is committed.
+# Per-machine UI state is not, and neither is a stray vault opened at the repo root.
+/.obsidian/
+TunezBot-Brain/.obsidian/workspace.json
+TunezBot-Brain/.obsidian/workspace-mobile.json

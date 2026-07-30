@@ -149,5 +149,32 @@ npm update
 
 Your `.env` file contains your private bot token and should not be shared.
 
+## What is in this repo
+
+| Path | What it is |
+| --- | --- |
+| `index.js` | The bot. One file, one process, all 17 commands. |
+| `deploy-commands.js` | Registers the slash commands with Discord. Run it when commands change. |
+| `.env.example` | Placeholder secrets. Copy to `.env` and fill in your own. |
+| `site/` | The landing page — three static files, no build step. |
+| `TunezBot-Brain/` | An Obsidian vault mapping how the project is wired and why. |
+| `assets/` | Bot avatar and icon concepts. |
+| `PROCESS_MAP.md` | The running record of the reasoning behind the decisions. |
+| `RASPBERRY_PI_SETUP.md` | Hardware parts list and the Pi build, written as it happens. |
+| `TunezbotFlowChartForLocal.html` | Animated walkthrough of what happens on a local run. |
+
+### The landing page
+
+`site/` holds `index.html`, `styles.css` and `script.js`. It is fully self-contained — no build step, no dependencies, no external assets. To deploy, drop those three files onto a static host such as [Cloudflare Drop](https://www.cloudflare.com/drop/), keeping `index.html` at the root. To preview it locally, open `site/index.html` in a browser.
+
+### The Obsidian vault
+
+`TunezBot-Brain/` is a linked note network — 65 notes covering the architecture, every command, the hosting decisions and the timeline. Install [Obsidian](https://obsidian.md), choose **Open folder as vault**, point it at `TunezBot-Brain`, and start at `Home.md`. Press `Ctrl+G` for the graph view.
+
+It is not a second copy of this README. This file covers *how to use* the bot; the vault covers *why it is built this way*, including the things that went wrong.
+
 ## Where to go next?
-- Head over to Raspberry Pi Setup to see the parts and how I set up the hardware required to get this project working in real time.
+
+- **[Raspberry Pi Setup](RASPBERRY_PI_SETUP.md)** — the parts I bought and how I set up the hardware to run this thing around the clock.
+- **[Process Map](PROCESS_MAP.md)** — the running log of decisions and the reasoning behind them, including the AWS hosting attempt that got reverted and why.
+- **`TunezBot-Brain/`** — the same reasoning as a navigable graph, if you would rather explore it by subject than by date.

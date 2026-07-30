@@ -90,3 +90,39 @@ Got the parts ordered from pishop.usa, list of which is in the Raspberry pi setu
 - index.js — added a "leave-off marker" comment noting where you paused the comment-revision pass for 7/28.
 - assets/pixilart-drawing.png — added a new bot icon concept drawn in external software.
 - Finally, of course, reviewed everything again to make sure i did it correctly including this documentation here.
+
+**July 29 comment and code revamp in index.js, LOC 55 to 111**
+- index.js — explained the yt-dlp media extraction (LOC 55-63), and what the trimming, whitespace conversion and newline split are doing (LOC 65-66).
+- index.js — explained getting the guild ID, pulling the history from the array, and appending the track to the end of it (LOC 73-76).
+- index.js — noted that the queued track shows in Discord instantly and does not wait on the 3 second timer (LOC 78), plus what the interval itself updates every 3 seconds including the progress bar (LOC 85).
+- index.js — explained the youtube playlist handling, the report of how many tracks were added, and why a failed message send must not crash the bot (LOC 89-92).
+- index.js — explained artist mode continuation, its repeated nature, the error logging to console, and what happens when the search cannot find another song by that artist (LOC 98-111).
+- index.js — added a second leave-off marker at LOC 112 for the 7/29 stopping point.
+- The comments are shifting toward saying *why* a line exists instead of restating what it does. A comment that repeats the code is worse than no comment, because now two things have to stay in sync instead of one.
+
+**July 30 — finished the comment pass into the handlers, then built the site and a thought network**
+
+Comment pass, picking up from the LOC 112 marker:
+- index.js — commented /tstopartist.
+- index.js — commented /tloop and /tstoploop.
+- index.js — commented /tskip, then its sub-paths: the catch, what gets shown, and the fallbacks.
+- index.js — commented /treplay: what the function does, the catch block, the string showing what is played, and the error handling.
+- Still left for next time: /trandom through /trelated, the utility functions, and the login call at the bottom.
+
+Obsidian vault, in TunezBot-Brain/:
+- Built the map of the project as a linked note network instead of a single document — 65 notes, one idea each, roughly 566 links between them. Open the folder as a vault and the graph view is the picture of it.
+- Split into Maps (the five hubs), Concepts (the 20 moving parts), Commands (one per slash command), Decisions (the reasoning, with the losing option kept in), Hosting, Timeline and Reference.
+- The reason for doing this before the site: the site is a presentation of the thinking, and it is much easier to present thinking that has already been laid out. Writing the map first meant the site copy came out of real notes instead of being invented while writing the page.
+- This file stays the canonical narrative. The vault is the same reasoning arranged so it can be walked through by subject rather than by date.
+
+Landing page, in site/:
+- Built it for real this time as three static files — index.html, styles.css, script.js. Self-contained, no build step, no dependencies, drops straight onto Cloudflare.
+- Pulled the visual direction from three sites I like: Nothing for the technical labelling and dot-matrix type, Blizzard's World of Warcraft page for the cinematic dark hero and section rhythm, shirtz.cool for the marquee and the motion. Landed on the DJ booth console idea — ink navy, the Discord blurple out of the bot's own avatar, tape deck amber, phosphor teal.
+- The hero wordmark is an actual dot matrix: the text is drawn to an offscreen canvas, sampled on a grid, and every lit cell becomes a dot driven by a travelling wave and the mouse.
+- The centrepiece is a simulated Discord session running the real commands. The booth clock ticks every second while the bot's presence line updates every 3, because that is what the bot actually does.
+- Everything on the page comes from the real README, the real commands and the real hosting story. No placeholder marketing copy, which was the whole complaint that got the first version deleted.
+
+Found a real bug while reading index.js to write all this:
+- LOC 19 registers `process.on('unknownRejection')`. Node only ever emits `unhandledRejection`, so that handler can never fire and an unhandled promise rejection now logs nothing at all.
+- This came from the 7/28 change where I reworded "unhandled" to "unknown". The intent was to reword the *message*, but the *event name* got changed with it. The log line and the comment can keep saying "unknown"; the event string has to go back to `unhandledRejection`.
+- Worth remembering as a category: renaming for readability is safe on your own words and unsafe on names an API owns. Nothing failed loudly here — the handler just quietly stopped existing, which is exactly the kind of change a comment pass is supposed to catch rather than cause.

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TunezBot — a Discord music bot you actually own</title>
+<meta name="description" content="A personal Discord music bot for one server. YouTube links or plain search text, 17 slash commands, one Node process, running on a Raspberry Pi at home." />
+<meta name="theme-color" content="#05070f" />
+<meta property="og:title" content="TunezBot — a Discord music bot you actually own" />
+<meta property="og:description" content="17 slash commands. One Node process. No database. Runs on a Raspberry Pi in a living room." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Crect width='1024' height='1024' rx='180' fill='%2305070f'/%3E%3Cg fill='none' stroke='%235865F2' stroke-width='44'%3E%3Crect x='284' y='242' width='456' height='96'/%3E%3Crect x='462' y='338' width='100' height='444'/%3E%3C/g%3E%3C/svg%3E" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- ═══════════════════════════ NAV ═══════════════════════════ -->
+<header class="nav" id="nav">
+  <a class="nav__brand" href="#top" aria-label="TunezBot, back to top">
+    <svg class="nav__mark" viewBox="0 0 1024 1024" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="72">
+        <rect x="284" y="242" width="456" height="96"/>
+        <rect x="462" y="338" width="100" height="444"/>
+      </g>
+    </svg>
+    <span class="nav__name">TUNEZBOT</span>
+  </a>
+
+  <nav class="nav__links" aria-label="Sections">
+    <a href="#console">Demo</a>
+    <a href="#commands">Commands</a>
+    <a href="#how">How it works</a>
+    <a href="#hosting">Hosting</a>
+    <a href="#setup">Setup</a>
+  </nav>
+
+  <a class="btn btn--sm" href="https://github.com/josephevenson08/TunezBot" target="_blank" rel="noopener">
+    <span>GitHub</span>
+    <svg viewBox="0 0 16 16" class="btn__arrow" aria-hidden="true"><path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="square"/></svg>
+  </a>
+
+  <button class="nav__toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span></button>
+</header>
+
+<main id="main">
+
+<!-- ═══════════════════════════ HERO ═══════════════════════════ -->
+<section class="hero" id="top">
+  <div class="hero__grid" aria-hidden="true"></div>
+  <div class="hero__glow" aria-hidden="true"></div>
+
+  <span class="mark mark--tl" aria-hidden="true"></span>
+  <span class="mark mark--tr" aria-hidden="true"></span>
+  <span class="mark mark--bl" aria-hidden="true"></span>
+  <span class="mark mark--br" aria-hidden="true"></span>
+
+  <div class="hero__inner">
+    <p class="hero__kicker">
+      <span class="dot" aria-hidden="true"></span>
+      PERSONAL DISCORD MUSIC BOT <span class="sep">/</span> v1.0.0
+    </p>
+
+    <h1 class="sr-only">TunezBot</h1>
+    <div class="hero__display">
+      <canvas id="matrix" class="hero__matrix" aria-hidden="true"></canvas>
+      <div class="hero__fallback" aria-hidden="true">TUNEZBOT</div>
+    </div>
+
+    <p class="hero__lede">
+      Paste a link or just type what you want to hear. It joins your voice channel and plays it.
+      <em>Seventeen slash commands, one Node process, no database, no dashboard, no subscription</em> —
+      running on a Raspberry Pi in a living room.
+    </p>
+
+    <div class="hero__actions">
+      <a class="btn btn--primary" href="#setup">
+        <span>Get it running</span>
+        <svg viewBox="0 0 16 16" class="btn__arrow" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="square"/></svg>
+      </a>
+      <a class="btn btn--ghost" href="https://github.com/josephevenson08/TunezBot" target="_blank" rel="noopener">
+        <span>Read the source</span>
+        <svg viewBox="0 0 16 16" class="btn__arrow" aria-hidden="true"><path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="square"/></svg>
+      </a>
+    </div>
+
+    <ul class="hero__specs">
+      <li><b>17</b><span>COMMANDS</span></li>
+      <li><b>1</b><span>PROCESS</span></li>
+      <li><b>0</b><span>DATABASES</span></li>
+      <li><b>~800</b><span>LINES</span></li>
+    </ul>
+  </div>
+
+  <a class="hero__scroll" href="#console" aria-label="Scroll to demo">
+    <span class="hero__scrollLine" aria-hidden="true"></span>
+    <span>SCROLL</span>
+  </a>
+</section>
+
+<!-- ═══════════════════════════ TICKER ═══════════════════════════ -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker__track" id="tickerTrack">
+    <div class="ticker__set">
+      <span>/tplay</span><i>◆</i><span>/tqueue</span><i>◆</i><span>/tskip</span><i>◆</i><span>/tloop</span><i>◆</i><span>/tstoploop</span><i>◆</i><span>/tpause</span><i>◆</i><span>/tresume</span><i>◆</i><span>/tnowplaying</span><i>◆</i><span>/treplay</span><i>◆</i><span>/trandom</span><i>◆</i><span>/thistory</span><i>◆</i><span>/tartist</span><i>◆</i><span>/tstopartist</span><i>◆</i><span>/trelated</span><i>◆</i><span>/tremove</span><i>◆</i><span>/tclear</span><i>◆</i><span>/tstop</span><i>◆</i>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ 01 · CONSOLE ═══════════════════════════ -->
+<section class="sec" id="console">
+  <div class="wrap">
+    <div class="sec__head">
+      <p class="label">01 <span class="sep">/</span> THE BOOTH</p>
+      <h2 class="sec__title">This is the entire interface.</h2>
+      <p class="sec__sub">No web dashboard. No control panel. You type a slash command in Discord and music happens. Here is a real session, playing out.</p>
+    </div>
+
+    <div class="booth">
+      <div class="booth__chrome">
+        <span class="booth__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="booth__title"># general <span class="sep">/</span> 🔊 music</span>
+        <span class="booth__status" id="botStatus"><span class="pulse" aria-hidden="true"></span>ONLINE</span>
+      </div>
+
+      <div class="booth__log" id="log" role="log" aria-live="polite" aria-label="Simulated Discord session"></div>
+
+      <div class="booth__now" id="nowPanel" data-active="false">
+        <div class="booth__nowTop">
+          <span class="label label--teal">NOW PLAYING</span>
+          <span class="booth__time"><span id="tCur">0:00</span> / <span id="tTot">0:00</span></span>
+        </div>
+        <p class="booth__track" id="nowTitle">—</p>
+        <div class="booth__bar"><span id="nowBar"></span></div>
+        <div class="booth__modes" id="nowModes"></div>
+      </div>
+
+      <div class="booth__input">
+        <span class="booth__slash" aria-hidden="true">/</span>
+        <span class="booth__typed" id="typed"></span><span class="caret" id="caret" aria-hidden="true"></span>
+      </div>
+    </div>
+
+    <p class="booth__foot">
+      Meanwhile the bot's own Discord status reads
+      <code id="presence">Listening to —</code>, refreshed every 3 seconds.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ 02 · COMMANDS ═══════════════════════════ -->
+<section class="sec sec--alt" id="commands">
+  <div class="wrap">
+    <div class="sec__head">
+      <p class="label">02 <span class="sep">/</span> INSTRUCTION SET</p>
+      <h2 class="sec__title">Seventeen commands.<br/>All prefixed <span class="hl">t</span>, so nothing collides.</h2>
+      <p class="sec__sub">Every one of them registered to your server, appearing in Discord's autocomplete within a minute of deploying.</p>
+    </div>
+
+    <div class="cmds__bar">
+      <div class="chips" role="group" aria-label="Filter commands by category">
+        <button class="chip is-on" data-filter="all">ALL <b>17</b></button>
+        <button class="chip" data-filter="playback">PLAYBACK <b>7</b></button>
+        <button class="chip" data-filter="queue">QUEUE <b>4</b></button>
+        <button class="chip" data-filter="discovery">DISCOVERY <b>3</b></button>
+        <button class="chip" data-filter="session">SESSION <b>3</b></button>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/></svg>
+        <input type="search" id="cmdSearch" placeholder="Filter…" aria-label="Search commands" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="cmds" id="cmdGrid">
+
+      <article class="cmd" data-cat="playback" data-key="tplay play song search url start">
+        <div class="cmd__top"><h3>/tplay</h3><span class="cmd__tag">PLAYBACK</span></div>
+        <p class="cmd__arg">&lt;YouTube URL or search&gt;</p>
+        <p class="cmd__desc">Plays something right now. Interrupts the current song but <b>keeps everything queued behind it</b> — your lineup survives.</p>
+      </article>
+
+      <article class="cmd" data-cat="queue" data-key="tqueue queue add list show next">
+        <div class="cmd__top"><h3>/tqueue</h3><span class="cmd__tag">QUEUE</span></div>
+        <p class="cmd__arg">[YouTube URL or search]</p>
+        <p class="cmd__desc">With text, adds to the end. Without, prints what's playing and the next ten up. Two jobs, one verb.</p>
+      </article>
+
+      <article class="cmd" data-cat="playback" data-key="tskip skip next">
+        <div class="cmd__top"><h3>/tskip</h3><span class="cmd__tag">PLAYBACK</span></div>
+        <p class="cmd__desc">Next track. In artist mode with an empty queue it fetches a fresh song <em>before</em> skipping, so you never land in silence.</p>
+      </article>
+
+      <article class="cmd" data-cat="queue" data-key="tremove remove delete position">
+        <div class="cmd__top"><h3>/tremove</h3><span class="cmd__tag">QUEUE</span></div>
+        <p class="cmd__arg">&lt;position&gt;</p>
+        <p class="cmd__desc">Drops one queued song by the number shown in <code>/tqueue</code>. Everything else stays put.</p>
+      </article>
+
+      <article class="cmd" data-cat="playback" data-key="tloop loop repeat again">
+        <div class="cmd__top"><h3>/tloop</h3><span class="cmd__tag">PLAYBACK</span></div>
+        <p class="cmd__desc">Loops the current track. Single track only — looping one song is what people actually want.</p>
+      </article>
+
+      <article class="cmd" data-cat="playback" data-key="tstoploop stop loop unloop">
+        <div class="cmd__top"><h3>/tstoploop</h3><span class="cmd__tag">PLAYBACK</span></div>
+        <p class="cmd__desc">Turns looping off. The current song finishes, then the queue picks up where it left off.</p>
+      </article>
+
+      <article class="cmd" data-cat="playback" data-key="tpause pause stop hold">
+        <div class="cmd__top"><h3>/tpause</h3><span class="cmd__tag">PLAYBACK</span></div>
+        <p class="cmd__desc">Pauses. The bot stays in the channel — pausing isn't leaving.</p>
+      </article>
+
+      <article class="cmd" data-cat="playback" data-key="tresume resume unpause continue">
+        <div class="cmd__top"><h3>/tresume</h3><span class="cmd__tag">PLAYBACK</span></div>
+        <p class="cmd__desc">Resumes. Deliberately not a toggle — you can't see the current state, so an explicit verb is always safe.</p>
+      </article>
+
+      <article class="cmd" data-cat="queue" data-key="tnowplaying now playing status progress current">
+        <div class="cmd__top"><h3>/tnowplaying</h3><span class="cmd__tag">QUEUE</span></div>
+        <p class="cmd__desc">Track, progress bar, who asked for it, and every mode currently on. The one place to find out why it keeps playing music.</p>
+      </article>
+
+      <article class="cmd" data-cat="session" data-key="treplay replay previous back again">
+        <div class="cmd__top"><h3>/treplay</h3><span class="cmd__tag">SESSION</span></div>
+        <p class="cmd__desc">Plays the previous track again. Steps backwards through playback order, not the session record.</p>
+      </article>
+
+      <article class="cmd" data-cat="session" data-key="trandom random shuffle session">
+        <div class="cmd__top"><h3>/trandom</h3><span class="cmd__tag">SESSION</span></div>
+        <p class="cmd__desc">Random pick from what tonight has already played — filtered so it never picks the song currently playing.</p>
+      </article>
+
+      <article class="cmd" data-cat="session" data-key="thistory history log played list">
+        <div class="cmd__top"><h3>/thistory</h3><span class="cmd__tag">SESSION</span></div>
+        <p class="cmd__desc">The last 15 tracks this session, newest first, with the current one marked so it doesn't read as a duplicate.</p>
+      </article>
+
+      <article class="cmd cmd--wide" data-cat="discovery" data-key="tartist artist mode endless forever radio">
+        <div class="cmd__top"><h3>/tartist</h3><span class="cmd__tag cmd__tag--amber">DISCOVERY</span></div>
+        <p class="cmd__arg">&lt;artist name&gt;</p>
+        <p class="cmd__desc">Artist mode. Every time the queue runs dry, another song by that artist appears. It searches with four different phrasings at random and filters against what you've already heard — three stacked sources of variation, because one wasn't enough to stop it feeling repetitive.</p>
+      </article>
+
+      <article class="cmd" data-cat="discovery" data-key="tstopartist stop artist mode off">
+        <div class="cmd__top"><h3>/tstopartist</h3><span class="cmd__tag cmd__tag--amber">DISCOVERY</span></div>
+        <p class="cmd__desc">Artist mode off. Handled before the queue check, because the mode outlives the queue.</p>
+      </article>
+
+      <article class="cmd" data-cat="discovery" data-key="trelated related similar like recommend">
+        <div class="cmd__top"><h3>/trelated</h3><span class="cmd__tag cmd__tag--amber">DISCOVERY</span></div>
+        <p class="cmd__desc">Queues something near what's playing. Not a similarity model — it asks YouTube the way a person would: <em>"songs like ___"</em>.</p>
+      </article>
+
+      <article class="cmd" data-cat="queue" data-key="tclear clear empty queue">
+        <div class="cmd__top"><h3>/tclear</h3><span class="cmd__tag">QUEUE</span></div>
+        <p class="cmd__desc">Empties the queue, keeps the current song. Counts first, so the confirmation tells you exactly how much vanished.</p>
+      </article>
+
+      <article class="cmd" data-cat="playback" data-key="tstop stop end leave quit">
+        <div class="cmd__top"><h3>/tstop</h3><span class="cmd__tag">PLAYBACK</span></div>
+        <p class="cmd__desc">Full stop. Clears artist mode, deletes the queue, leaves the channel, wipes the session. Three lines that reset six things.</p>
+      </article>
+
+    </div>
+
+    <p class="cmds__empty" id="cmdEmpty" hidden>Nothing matches that.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ 03 · SIGNAL CHAIN ═══════════════════════════ -->
+<section class="sec" id="how">
+  <div class="wrap">
+    <div class="sec__head">
+      <p class="label">03 <span class="sep">/</span> SIGNAL CHAIN</p>
+      <h2 class="sec__title">Typed word to sound,<br/>in eight hops.</h2>
+      <p class="sec__sub">Every box is a real dependency doing one job. Nothing here is a framework — it's a chain you can follow end to end.</p>
+    </div>
+
+    <ol class="chain" id="chain">
+      <li class="chain__node" data-n="01">
+        <h3>Discord</h3>
+        <p>You type <code>/tplay</code> in a voice channel.</p>
+      </li>
+      <li class="chain__node" data-n="02">
+        <h3>Gateway</h3>
+        <p>A WebSocket held open for the life of the process. Close it and the bot is gone.</p>
+      </li>
+      <li class="chain__node" data-n="03">
+        <h3>Router</h3>
+        <p>One handler in <code>index.js</code>. Checks you're in voice, defers the reply.</p>
+      </li>
+      <li class="chain__node" data-n="04">
+        <h3>Normalize</h3>
+        <p>Strips Discord's markdown, rebuilds the URL from the video ID, drops <code>&amp;list=</code>.</p>
+      </li>
+      <li class="chain__node" data-n="05">
+        <h3>yt-dlp</h3>
+        <p>Searches, then returns a direct audio URL. Never downloads a file.</p>
+      </li>
+      <li class="chain__node" data-n="06">
+        <h3>discord-player</h3>
+        <p>Owns the queue, the history, the progress bar, the idle timeout.</p>
+      </li>
+      <li class="chain__node" data-n="07">
+        <h3>ffmpeg</h3>
+        <p>Transcodes to Opus. The only part of this that costs real CPU.</p>
+      </li>
+      <li class="chain__node" data-n="08">
+        <h3>Voice</h3>
+        <p>UDP stream into the channel. Sound.</p>
+      </li>
+    </ol>
+
+    <div class="notes">
+      <div class="note">
+        <span class="label label--teal">STATE</span>
+        <p>Three <code>Map</code>s keyed by server ID — queue, session history, artist mode. Capped at 50 tracks. <b>Nothing is written to disk.</b> Restart the bot and the session is gone, which is exactly what a session should do.</p>
+      </div>
+      <div class="note">
+        <span class="label label--amber">SAFETY</span>
+        <p>Every playback call gets one retry, 1.5 seconds apart. Not five — more retries at a service deciding whether you're a robot makes things worse, not better.</p>
+      </div>
+      <div class="note">
+        <span class="label label--blurple">IDLE</span>
+        <p>Queue ends, five minutes pass with nothing added, the bot leaves on its own. Long enough to argue about the next song. Short enough not to lurk.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ 04 · HOSTING ═══════════════════════════ -->
+<section class="sec sec--alt" id="hosting">
+  <div class="wrap">
+    <div class="sec__head">
+      <p class="label">04 <span class="sep">/</span> FIELD REPORT</p>
+      <h2 class="sec__title">The cloud was the obvious answer.<br/>It was the wrong one.</h2>
+      <p class="sec__sub">This bot ran on AWS. Everything worked except the thing it exists to do. What follows is the actual evidence, and what it cost to find.</p>
+    </div>
+
+    <div class="versus">
+      <article class="vs vs--dead">
+        <div class="vs__head">
+          <span class="label label--red">REVERTED</span>
+          <h3>AWS EC2 <span>t3.micro</span></h3>
+        </div>
+        <p class="vs__lede">Ubuntu 24.04, Node via nvm, ffmpeg via apt. Login, command registration and voice connection all worked first try.</p>
+        <ul class="vs__list">
+          <li><b>Direct YouTube URL</b><span class="ok">3 / 3 succeeded</span></li>
+          <li><b>Plain-text search</b><span class="bad">repeated failures</span></li>
+          <li><b>Search, with retry</b><span class="bad">still failed</span></li>
+        </ul>
+        <p class="vs__note">One track failed on <em>both</em> the attempt and the retry — for a URL yt-dlp had resolved correctly seconds earlier.</p>
+      </article>
+
+      <div class="versus__mid" aria-hidden="true">
+        <span class="versus__line"></span>
+        <span class="versus__badge">WHY</span>
+        <span class="versus__line"></span>
+      </div>
+
+      <article class="vs vs--live">
+        <div class="vs__head">
+          <span class="label label--teal">CURRENT</span>
+          <h3>Raspberry Pi 4 <span>1GB</span></h3>
+        </div>
+        <p class="vs__lede">Pi OS Lite, Ethernet, in a case, on home internet. One Node process, one ffmpeg transcode at a time, 1GB is plenty.</p>
+        <ul class="vs__list">
+          <li><b>IP range</b><span class="ok">residential</span></li>
+          <li><b>Cost after hardware</b><span class="ok">pennies of power</span></li>
+          <li><b>Depends on</b><span class="warn">home power + internet</span></li>
+        </ul>
+        <p class="vs__note">A real trade: no snapshots, no failover, and a power cut takes it down. Accepted knowingly.</p>
+      </article>
+    </div>
+
+    <div class="finding">
+      <p class="label">THE FINDING</p>
+      <p class="finding__big">YouTube treats datacenter IPs differently from home connections — and the <em>search</em> endpoint is guarded far more heavily than the video one.</p>
+      <p class="finding__body">
+        The direct-URL path fires two requests. The search path fires three. On a flagged AWS address, that one extra request was the difference between working and not.
+        It never presented as a block — just intermittent, inconsistent failure that reads exactly like a bug in your own code.
+        <b>It wasn't fixable in code, so the fix was a different address.</b>
+      </p>
+      <p class="finding__kept">
+        Two changes made during the investigation survived the rollback: searching through yt-dlp instead of the extractor's own API, and the retry wrapper.
+        Neither was AWS-specific — both replaced something fragile with something better. When an experiment fails, the changes still need sorting into scaffolding and genuine improvement. Throwing out both is the easy mistake.
+      </p>
+    </div>
+
+    <div class="cf">
+      <span class="label label--amber">ALSO ASKED</span>
+      <p><b>"The landing page is free on Cloudflare — why not the bot too?"</b> Because this page is files and the bot is a process. It holds a WebSocket open forever, spawns ffmpeg and yt-dlp as real binaries, and streams live UDP. Serverless does none of those. Cloudflare Containers <em>can</em> hold a process open — but that platform scales workloads across regions, and this needs exactly one instance alive in one place forever. Two of these bots means double commands and a fight over the voice channel.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ 05 · SETUP ═══════════════════════════ -->
+<section class="sec" id="setup">
+  <div class="wrap">
+    <div class="sec__head">
+      <p class="label">05 <span class="sep">/</span> INSTALLATION</p>
+      <h2 class="sec__title">Running in five steps.</h2>
+      <p class="sec__sub">Needs Node 18 or newer. Everything else installs itself.</p>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <span class="step__n">01</span>
+        <div class="step__body">
+          <h3>Create the Discord app</h3>
+          <p>Developer Portal → <b>New Application</b> → name it TunezBot. Open <b>Bot</b>, hit <b>Reset Token</b>, copy it. Grab the <b>Application ID</b> from General Information — that's your <code>CLIENT_ID</code>.</p>
+          <p class="step__warn">The token is the whole security model. Anyone holding it controls your bot. Never paste it into a doc, a screenshot, or a commit.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step__n">02</span>
+        <div class="step__body">
+          <h3>Get your server ID</h3>
+          <p>Discord → <b>Settings → Advanced → Developer Mode</b> on. Right-click your server icon → <b>Copy Server ID</b>.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step__n">03</span>
+        <div class="step__body">
+          <h3>Fill in <code>.env</code></h3>
+          <p>Copy <code>.env.example</code> to <code>.env</code> and drop your three values in. <code>.env</code> is gitignored; the example file ships blank on purpose.</p>
+          <div class="code">
+            <pre><code>DISCORD_TOKEN=your_bot_token_here
+CLIENT_ID=your_application_client_id_here
+GUILD_IDS=your_discord_server_id_here</code></pre>
+            <button class="copy" data-copy="DISCORD_TOKEN=your_bot_token_here&#10;CLIENT_ID=your_application_client_id_here&#10;GUILD_IDS=your_discord_server_id_here">COPY</button>
+          </div>
+          <p class="step__hint"><code>GUILD_IDS</code> takes a comma-separated list if you want a test server too.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step__n">04</span>
+        <div class="step__body">
+          <h3>Invite it</h3>
+          <p>OAuth2 → URL Generator. Scopes <code>bot</code> and <code>applications.commands</code>. Permissions: View Channels, Send Messages, Connect, Speak, Use Voice Activity. Open the generated link and pick your server.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step__n">05</span>
+        <div class="step__body">
+          <h3>Register and run</h3>
+          <div class="code">
+            <pre><code>npm install
+npm run deploy
+npm start</code></pre>
+            <button class="copy" data-copy="npm install&#10;npm run deploy&#10;npm start">COPY</button>
+          </div>
+          <p><code>install</code> once. <code>deploy</code> only when commands change. <code>start</code> every time you want it online — and the terminal running it has to stay open. That constraint is the entire reason a Raspberry Pi got involved.</p>
+          <div class="code code--sm">
+            <pre><code>/tplay never gonna give you up</code></pre>
+            <button class="copy" data-copy="/tplay never gonna give you up">COPY</button>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ 06 · SPEC ═══════════════════════════ -->
+<section class="sec sec--alt" id="spec">
+  <div class="wrap">
+    <div class="sec__head">
+      <p class="label">06 <span class="sep">/</span> SPECIFICATION</p>
+      <h2 class="sec__title">Everything, on one sheet.</h2>
+    </div>
+
+    <div class="spec">
+      <div class="spec__col">
+        <p class="spec__h">RUNTIME</p>
+        <dl>
+          <div><dt>Node</dt><dd>18+</dd></div>
+          <div><dt>Module system</dt><dd>CommonJS</dd></div>
+          <div><dt>Build step</dt><dd>none</dd></div>
+          <div><dt>Processes</dt><dd>1</dd></div>
+          <div><dt>Source</dt><dd>~800 lines, one file</dd></div>
+        </dl>
+      </div>
+
+      <div class="spec__col">
+        <p class="spec__h">STACK</p>
+        <dl>
+          <div><dt>discord.js</dt><dd>14.x</dd></div>
+          <div><dt>discord-player</dt><dd>7.x</dd></div>
+          <div><dt>Extractor</dt><dd>discord-player-youtubei</dd></div>
+          <div><dt>Search + stream</dt><dd>yt-dlp</dd></div>
+          <div><dt>Transcode</dt><dd>ffmpeg-static</dd></div>
+        </dl>
+      </div>
+
+      <div class="spec__col">
+        <p class="spec__h">BEHAVIOUR</p>
+        <dl>
+          <div><dt>Volume</dt><dd>70</dd></div>
+          <div><dt>Status refresh</dt><dd>3 s</dd></div>
+          <div><dt>Idle disconnect</dt><dd>5 min</dd></div>
+          <div><dt>History cap</dt><dd>50 tracks</dd></div>
+          <div><dt>Joins deafened</dt><dd>no</dd></div>
+        </dl>
+      </div>
+
+      <div class="spec__col">
+        <p class="spec__h">HOST</p>
+        <dl>
+          <div><dt>Board</dt><dd>Raspberry Pi 4 · 1GB</dd></div>
+          <div><dt>OS</dt><dd>Pi OS Lite 64-bit</dd></div>
+          <div><dt>Network</dt><dd>Ethernet, residential</dd></div>
+          <div><dt>Storage</dt><dd>32GB microSD</dd></div>
+          <div><dt>Persistence</dt><dd>none, by design</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <p class="spec__foot">Music extractors break when providers change their sites. <code>npm update</code> is usually the whole fix.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ CTA ═══════════════════════════ -->
+<section class="cta">
+  <div class="cta__glow" aria-hidden="true"></div>
+  <div class="wrap wrap--tight">
+    <p class="label">END OF CHAIN</p>
+    <h2 class="cta__title">Take it and run your own.</h2>
+    <p class="cta__sub">Fork it, read it, break it. The whole thing is one file you can hold in your head — including the parts that went wrong, written down where you can find them.</p>
+    <div class="hero__actions">
+      <a class="btn btn--primary" href="https://github.com/josephevenson08/TunezBot" target="_blank" rel="noopener">
+        <span>josephevenson08/TunezBot</span>
+        <svg viewBox="0 0 16 16" class="btn__arrow" aria-hidden="true"><path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="square"/></svg>
+      </a>
+      <a class="btn btn--ghost" href="#top"><span>Back to top</span></a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <div class="foot__brand">
+      <svg class="nav__mark" viewBox="0 0 1024 1024" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="72">
+          <rect x="284" y="242" width="456" height="96"/>
+          <rect x="462" y="338" width="100" height="444"/>
+        </g>
+      </svg>
+      <span>TUNEZBOT</span>
+    </div>
+    <p class="foot__meta">A personal project by Joseph Evenson <span class="sep">/</span> built, broken and documented in public</p>
+    <a class="foot__link" href="https://github.com/josephevenson08/TunezBot" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
