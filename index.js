@@ -111,7 +111,7 @@ player.events.on(GuildQueueEvent.EmptyQueue, async (queue) => {
   }
 // ------------------------------------------left off here on 7/29------------------------------------------
 
-  queue.metadata?.send('Queue finished.').catch(() => {});
+  queue.metadata?.send('Queue finished.').catch(() => {}); 
 
   clearInterval(activityIntervals.get(queue.guild.id));
   activityIntervals.delete(queue.guild.id);
@@ -200,7 +200,7 @@ function trackTitle(track) {
   return track?.cleanTitle || track?.title || 'Unknown track';
 }
 
-// Clean up pasted YouTube links, Discord markdown links, and youtu.be playlist URLs.
+// Clean up pasted YouTube links, Discord markdown links, and youtube playlist URLs.
 function normalizePlayQuery(query) {
   const trimmed = query.trim();
   const markdownLink = trimmed.match(/^\[([^\]]+)]\((https?:\/\/[^)]+)\)$/i);
@@ -473,6 +473,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  // server stop for artistmode
   if (commandName === 'tstopartist') {
     // Stop artist mode for this server only.
     artistModes.delete(interaction.guildId);
