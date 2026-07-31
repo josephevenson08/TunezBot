@@ -35,6 +35,7 @@ Typical flow:
 /tplay first song
 /tqueue second song
 /tskip
+/tstop
 ```
 
 `/tplay` starts music. `/tqueue` with a song adds it after the current song. `/tqueue` with no song shows what is playing and what is up next. `/tskip` moves to the next queued song.
