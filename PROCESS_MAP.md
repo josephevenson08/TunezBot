@@ -185,6 +185,38 @@ Not working: the **second** voice connection in a session. First `/tplay` plays;
 
 Not yet done: removing `ffmpeg-static` from `package.json`. The Pi is currently running on a symlink in `node_modules` that `npm install` will silently undo.
 
+### August 14, later — finished it
+
+Picked this back up and got the bot actually working, not "working until you use it twice".
+
+**Removed `ffmpeg-static` from the project.** Its Linux build is statically linked, and a statically linked glibc binary cannot use NSS, so it cannot resolve a hostname — it decodes local files perfectly and cannot open a single URL, which is the only thing this bot ever asks of it. `FFMPEG_PATH` is not a way around that, because prism-media looks for `ffmpeg-static` first and never reads the variable. So the only fix is not having the package. ffmpeg is now a real setup step (`apt install ffmpeg`, `winget install ffmpeg`) on both machines, with the reasoning written into the README so nobody deletes that line later thinking it is redundant. This also closed a trap — the Pi had been running on a symlink inside `node_modules` that the next `npm install` would have silently undone.
+
+**The bot was leaving the voice channel and rejoining on every `/tplay`.** I spotted this by watching Discord rather than the logs. `/tplay` deleted the queue to rebuild it, and `queue.delete()` triggers `leaveOnStop`, which drops the voice connection — and the immediate rejoin was what kept timing out as `AbortError` from `discord-voip`. That had been the mystery error all day and it was self-inflicted.
+
+**Then `/tplay` played the wrong song.** Fixed the disconnect by inserting the new track at the front and skipping to it — except `insertTrack(track, 0)` appends rather than inserting at position 0, so the skip landed on whatever was already queued. Play A, queue B, `/tplay` C, get B.
+
+The right answer was `node.play(track, { queue: false })` — "play this now, do not queue it" — which is exactly what the command means, and which `/trandom` in the same file has been doing correctly since it was written. **The answer was already in the codebase.**
+
+**One experiment that failed, and it reframes the AWS postmortem.** I tried deleting the `createStream` override on the theory that it was only ever an AWS workaround, and that the extractor's own `youtubei.js` path would be fine from a residential IP. It would also have saved the 5–9 seconds of Python startup that yt-dlp costs per track. It does not work: every track came back `NoResultError` / `ERR_NO_RESULT` — **the same error the AWS attempt hit.**
+
+That is worth sitting with. The AWS section above treats that error as evidence about IP ranges. It is not only that: the extractor's built-in streaming is broken here too, on a residential connection, for its own reasons. The yt-dlp override was load-bearing all along and I had it filed as a workaround. It is now commented in the code so nobody removes it again on the same reasoning I did.
+
+**Still unsolved: yt-dlp costs 5–9 seconds per track.** Measured properly this time — 5.7s by hand, 9.4s inside the bot, and `--extractor-args` variants only got it to 5.1s because the cost is Python starting up on a slow ARM core, not the network. It is no longer fatal now that nothing is racing it, but it is the ugliest thing left in the pipeline.
+
+### What I keep getting wrong, which is the actual lesson from today
+
+Three times in one day I assumed an API did what its name suggested, and shipped a "fix" without checking:
+
+- `FFMPEG_PATH` — prism-media never reads it
+- `jsRuntimes: 'node'` — `youtube-dl-exec` never passes it through
+- `insertTrack(track, 0)` — appends instead of inserting at index 0
+
+Each was verifiable in one command. `FFmpeg.getInfo().command` prints which binary is used. Asking for the same URL with and without a flag shows whether the flag did anything. Playing a queued song shows where a track landed. I wrote three commits claiming fixes that changed nothing or changed the wrong thing.
+
+The pattern behind it: **I believed a fix worked because the symptom went away.** Half the time the symptom went away because a DNS cache was warm. Every "it works now" today was followed by "it stopped again."
+
+What actually moved things forward, without exception, was measurement — `5.029s`, `110ms on arrival / 5351ms by failure`, `9404ms`, `ANDROID_VR` twice — and one observation that came from watching the bot instead of the logs: it was leaving the voice channel.
+
 Still open:
 - Finish the comment pass — /trandom through /trelated, the utility functions, and login.
 - `deferReply` sits outside the try block in seven handlers. The router-level catch stops the crash, but those handlers still cannot tell the user their command died.

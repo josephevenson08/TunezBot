@@ -39,6 +39,12 @@ Fixing the name was **not sufficient** — a rejected promise from an async even
 
 ## Platform
 
+**yt-dlp costs 5–9 seconds per track.** The biggest ugly thing left. Measured: 5.7s by hand, 9.4s inside the bot, and `--extractor-args` variants only reached 5.1s — the cost is Python starting up on a slow ARM core, not the network. No longer fatal now that nothing races it, but every track pays it before a byte of audio moves.
+
+Two dead ends already tried: extractor args (no real gain), and removing the override entirely so the extractor streams via `youtubei.js` (fails outright with `ERR_NO_RESULT`). A third option not yet tried: piping yt-dlp's stdout instead of resolving a URL first, so bytes flow immediately. `-o -` returned 0 bytes when tested, but always with stderr suppressed — worth retesting properly. → [[yt-dlp]]
+
+**The extractor's own streaming is broken here, not just on AWS.** Removing `createStream` produces `ERR_NO_RESULT` on a residential IP — the same error the [[AWS hosting postmortem]] attributes to datacenter IP ranges. So the yt-dlp override was load-bearing all along, not a workaround that could be retired. This slightly reframes that postmortem: the error had two causes and only one of them was the IP.
+
 **`opusscript` instead of the native encoder.** The pure-JS encoder uses more CPU than `@discordjs/opus`. Fine for one stream on a Pi 4. If it ever isn't, dropping to Node 22 would probably get a prebuilt native binary — but measure with `htop` before assuming. → [[2026-08-14 Site vault and Pi deployment]]
 
 **No monitoring.** `systemd` restarts the bot, but nothing tells you it restarted. A bot that silently crash-loops looks identical to a bot nobody is using.

@@ -74,6 +74,50 @@ So the router became a named function with `.catch()` attached at registration: 
 
 It works. On hardware in this house. With no terminal open anywhere. → [[Raspberry Pi 4 build]]
 
-Still open in [[Open questions]]: finish the comment pass, `deferReply` outside the try block in seven handlers, the npm audit warnings, and deploying the landing page.
+## Evening: from "hosted" to actually usable
 
-Related: [[Timeline MOC]] · [[Hosting MOC]] · [[Home]]
+The section above was written while the bot was working. It stopped again half an hour later. Everything below is the second half of the same day.
+
+### The DNS fault that caused most of it
+
+Every uncached hostname lookup took **exactly 5.029 seconds** — the glibc resolver timeout. Each query is fast alone; only together do they stall:
+
+| Query | Time |
+| --- | --- |
+| IPv4 alone | 0.063s |
+| IPv6 alone | 0.022s |
+| Both together | **5.029s** |
+
+glibc sends A and AAAA in parallel on one socket and this router mishandles it. Discord allows 3 seconds to acknowledge a command, so `deferReply` was dead before its request left the Pi — every `10062 Unknown interaction`. Voice endpoints paid it too, which is where the `AbortError`s came from.
+
+Fixed with `single-request-reopen` via NetworkManager: 5.029s → 0.041s.
+
+**The transferable bit:** "works, then doesn't, then does" on a home network is very often DNS, and `getent ahosts` versus `ahostsv4`/`ahostsv6` catches it in thirty seconds.
+
+### Three fixes that landed
+
+1. **`ffmpeg-static` removed from the project.** Its Linux build cannot resolve hostnames, and `FFMPEG_PATH` cannot override it because prism-media checks the package first and never reads that variable. ffmpeg is now an OS install on every platform → [[ffmpeg]]
+2. **`/tplay` no longer drops the voice connection.** It was deleting the queue to rebuild it, and `queue.delete()` triggers `leaveOnStop` → the bot left the channel and rejoined on every play, and *that rejoin* was the `AbortError` → [[tplay preserves the queue]]
+3. **`/tplay` no longer plays the wrong song.** The first attempt at fix 2 used `insertTrack(track, 0)`, which appends rather than inserting at the front.
+
+### The experiment that failed, and what it reframes
+
+Removed the `createStream` override on the theory it was only ever an AWS workaround, and that the extractor's own `youtubei.js` path would work from a residential IP — which would also have saved 5–9 seconds of Python per track.
+
+It fails with `ERR_NO_RESULT`: **the same error the [[AWS hosting postmortem]] attributes to datacenter IP ranges.** So the extractor's built-in streaming is broken here too, and the yt-dlp override was load-bearing rather than a workaround awaiting retirement. That postmortem's conclusion isn't wrong, but the error had two causes and only one was the IP.
+
+### What I kept getting wrong
+
+Three times in one day I assumed an API did what its name suggested and shipped a fix that changed nothing:
+
+- `FFMPEG_PATH` — prism-media never reads it
+- `jsRuntimes: 'node'` — `youtube-dl-exec` never passes it through
+- `insertTrack(track, 0)` — appends instead of inserting at index 0
+
+Each was checkable in one command. The underlying error was **believing a fix worked because the symptom disappeared** — and half the time it disappeared because a DNS cache was warm.
+
+What actually worked, every time, was measuring: `5.029s`, `110ms on arrival / 5351ms by failure`, `9404ms`, `ANDROID_VR` twice. And one observation that came from watching the bot rather than the logs — noticing it leave the voice channel — which turned out to be the whole `AbortError` mystery.
+
+The working `/tplay` also ended up being the shortest version, using a call already in the same file: `/trandom` had been doing "play this now, don't queue it" correctly the entire time.
+
+Related: [[Timeline MOC]] · [[Hosting MOC]] · [[Home]] · [[Open questions]]
