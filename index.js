@@ -5,6 +5,7 @@ const { Client, Events, GatewayIntentBits, ActivityType } = require('discord.js'
 const { Player, GuildQueueEvent, QueueRepeatMode } = require('discord-player');
 const { YoutubeExtractor } = require('discord-player-youtubei');
 const youtubeDl = require('youtube-dl-exec');
+const { PassThrough } = require('node:stream');
 
 // Pull the bot token from .env.example so it is not hard-coded in the executable source code.
 const { DISCORD_TOKEN } = process.env;
@@ -72,8 +73,65 @@ function getSessionHistory(guildId) {
 // jsRuntimes matters and is not optional. YouTube guards playback with a JavaScript
 // challenge, and yt-dlp needs a JS engine to solve it - it only enables deno by default, so
 // this points it at the node already running the bot. Without it, downloads fail 403.
+//
+// It retries, and that is not belt and braces. YouTube refuses a second simultaneous media
+// fetch from the same address, and because we pipe, yt-dlp now holds a connection open for
+// the whole song rather than for a second. Measured on the pi: one fetch returns 4,000,874
+// bytes, two started at the same moment return zero bytes each. So when a track overlaps
+// another it can die instantly, and trying again a moment later works - the failing track at
+// 15:34:02 played fine at 15:34:20.
+//
+// Only retries when nothing at all came through. A stream that dies halfway is a different
+// problem and restarting it would replay the song from the beginning.
 function createYoutubeStream(track) {
-  const subprocess = youtubeDl.exec(track.url, {
+  const output = new PassThrough();
+  let attempts = 0;
+
+  const spawnAttempt = () => {
+    attempts += 1;
+    let receivedBytes = false;
+
+    const subprocess = spawnYoutubeDl(track);
+
+    subprocess.stdout.on('data', () => {
+      receivedBytes = true;
+    });
+    subprocess.stdout.pipe(output, { end: false });
+    subprocess.stdout.on('end', () => {
+      if (receivedBytes) {
+        output.end();
+      }
+    });
+
+    subprocess.catch((error) => {
+      // killed and signalCode live on the error, not on the subprocess - youtube-dl-exec uses
+      // tinyspawn rather than execa. Checking the wrong one meant every skipped or finished
+      // track would have logged a failure it did not have.
+      if (error.killed || error.signalCode === 'SIGTERM' || error.signalCode === 'SIGPIPE') {
+        output.end(); // normal end of track: discord-player closed the pipe, or we skipped it
+        return;
+      }
+
+      if (!receivedBytes && attempts < 3) {
+        console.warn(`yt-dlp produced nothing on attempt ${attempts}, retrying in 2s`);
+        setTimeout(spawnAttempt, 2000);
+        return;
+      }
+
+      // error.stderr is where yt-dlp actually explains itself. Without it this logs an exit
+      // code and nothing else, which is what happened the first time round.
+      const reason = (error.stderr || '').trim().split('\n').slice(-4).join(' | ');
+      console.error(`yt-dlp stream failed for ${track.url} after ${attempts} attempts: ${reason || error.message}`);
+      output.end();
+    });
+  };
+
+  spawnAttempt();
+  return output;
+}
+
+function spawnYoutubeDl(track) {
+  return youtubeDl.exec(track.url, {
     output: '-', // write the audio to stdout
     format: track.live ? 'best[height<=360]' : 'bestaudio', // audio only, no video data to throw away
     jsRuntimes: 'node',
@@ -90,24 +148,6 @@ function createYoutubeStream(track) {
     // and nothing to say for itself. stdout is carrying the audio, so stderr is free.
     noProgress: true, // progress bars are the one thing that is genuinely just noise
   });
-
-  // execa rejects this promise when yt-dlp exits non-zero. Nothing awaits it, so without a
-  // catch here a failed track becomes an unhandled rejection instead of a log line.
-  subprocess.catch((error) => {
-    // killed and signalCode live on the error, not on the subprocess - youtube-dl-exec uses
-    // tinyspawn rather than execa. Checking the wrong one meant every skipped or finished
-    // track would have logged a failure it did not have.
-    if (error.killed || error.signalCode === 'SIGTERM' || error.signalCode === 'SIGPIPE') {
-      return; // normal end of track: discord-player closed the pipe, or we skipped it
-    }
-
-    // error.stderr is where yt-dlp actually explains itself. Without it this logs an exit
-    // code and nothing else, which is what happened the first time round.
-    const reason = (error.stderr || '').trim().split('\n').slice(-4).join(' | ');
-    console.error(`yt-dlp stream failed for ${track.url}: ${reason || error.shortMessage || error.message}`);
-  });
-
-  return subprocess.stdout;
 }
 
 // Logs how long it takes to hand back a stream. This used to report 5-9 seconds, because
