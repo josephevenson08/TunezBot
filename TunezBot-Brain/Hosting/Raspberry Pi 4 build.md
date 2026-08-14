@@ -34,13 +34,24 @@ Yes, and by a wide margin:
 | Hostname `TunezBot` | `ssh user@tunezbot.local` beats memorising an IP |
 | Pi Connect off | Not needed; one less service listening |
 
-## What still has to happen
+## Done — 2026-08-14
 
-1. Get back on home internet and finish the SSH connection → [[Pi setup progress]]
-2. Install Node, clone the repo, `npm install`
-3. Recreate `.env` on the Pi — typed by hand, never copied from a document → [[Environment Secrets]]
-4. `npm run deploy` once, then `npm start`
-5. **Make it survive a reboot** — a `systemd` service, so the bot restarts with the Pi and after a crash. This is the piece that separates "running on a Pi" from "hosted on a Pi" → [[Open questions]]
+All of it. SSH, Node from NodeSource, repo cloned, `.env` written, commands deployed, and a `systemd` unit with `Restart=always` and `enable`d so it comes back from a crash, a reboot or a power cut with nobody logged in.
+
+Full walkthrough in `RASPBERRY_PI_SETUP.md`; the story of what broke on the way is in [[2026-08-14 Site vault and Pi deployment]].
+
+Two platform facts worth carrying forward:
+
+- **The native Opus encoder will not build here.** No prebuilt binary for ARM64 on Node 24, and the source build dies on an ARM NEON compile error. `opusscript` (pure JS) is what runs → [[ffmpeg]]
+- **`ffmpeg-static` is useless on this machine** — a statically linked glibc binary cannot resolve hostnames. `FFMPEG_PATH` points at the system ffmpeg instead.
+
+## Operating it
+
+```
+journalctl -u tunezbot -f                              # the log
+cd ~/TunezBot && git pull && sudo systemctl restart tunezbot   # update
+sudo shutdown -h now                                   # never pull the power
+```
 
 ## Shutdown
 

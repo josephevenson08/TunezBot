@@ -2,45 +2,48 @@
 tags:
   - hosting
   - log
-status: paused
+status: done
 ---
 
 # Pi setup progress
 
-Live status of the physical build. Full step-by-step lives in `RASPBERRY_PI_SETUP.md` in the repo — this is the summary and the blocker.
+**Done. The bot is hosted on the Pi.** Full step-by-step lives in `RASPBERRY_PI_SETUP.md`; this is the summary.
 
-## Done — steps 1 to 11
+## Steps 1–11 — 2026-07-27
 
-1. `.env` values on hand — token, client ID, guild ID → [[Environment Secrets]]
-2. Raspberry Pi Imager installed from raspberrypi.com, default settings
-3. 32GB microSD in the laptop
-4. Imager configured: Pi 4 → Raspberry Pi OS Lite (64-bit) → the SD card → hostname `TunezBot` → localisation → username and password → **Wi-Fi left blank (Ethernet)** → **SSH on, password auth** → Pi Connect off
-5. Written, **verification not skipped**
-6. Card ejected safely
-7. Card into the board
-8. Board into the case, lid on
-9. Ethernet connected
-10. Power connected, ~2 minutes to first boot
-11. `ssh myusername@tunezbot.local` from PowerShell
+SD card written with Pi OS Lite 64-bit via the Imager (hostname `TunezBot`, SSH on, Wi-Fi blank for Ethernet), card into the board, board into the case, powered up, first boot successful. → [[2026-07-27 Pi assembly]]
 
-## Blocked at step 11
+Blocked at step 11 for two weeks: `ssh …@tunezbot.local` resolves over mDNS, which only works on the same network. Not a configuration problem, a "be in the right building" problem.
 
-**Not on home internet.** `tunezbot.local` resolves via mDNS on the local network — from a different network, there is nothing to resolve. This is not a configuration problem to debug; it is a "be in the right building" problem.
+## Steps 12–18 — 2026-08-14
 
-## Next, once back home
+Back on home internet. → [[2026-08-14 Site vault and Pi deployment]]
 
-- Complete the SSH connection
-- `sudo apt update && sudo apt upgrade`
-- Install Node 18+ and [[ffmpeg]]
-- Clone from GitHub, `npm install`
-- **Type `.env` by hand.** Do not paste from any document. A token was exposed once already on this project and had to be reset → [[Environment Secrets]]
-- `npm run deploy`, then `npm start`, then a real `/tplay` test
-- Set up `systemd` so it survives reboots → [[Open questions]]
+| Step | What |
+| --- | --- |
+| 12 | SSH connected. Username `josephevenson`, now recorded in the setup guide because it had been forgotten. |
+| 13 | `apt update && full-upgrade` |
+| 14 | `git`, `python3`, `ffmpeg`, then Node 24 from NodeSource — **not** nvm, so `systemd` gets a stable `/usr/bin/node` |
+| 15 | Cloned the repo, `npm install`. 748Mi available + 904Mi swap, no memory trouble. |
+| 16 | `.env` typed by hand, plus a Pi-only `FFMPEG_PATH` line → [[Environment Secrets]] |
+| 17 | `npm run deploy`, then the first working `/tplay` |
+| 18 | `systemd` unit, `enable`d — the step that makes it *hosted* rather than *running* |
 
-## Shutdown, every time
+## What went wrong on the way
+
+Four failures, each hiding the next, all written up in [[2026-08-14 Site vault and Pi deployment]] and in the setup guide:
+
+1. npm 11 blocks install scripts → yt-dlp and ffmpeg binaries never downloaded
+2. No Opus encoder in `package.json` at all → the bot played silence
+3. `ffmpeg-static` can't resolve hostnames (static glibc, no NSS) → `FFMPEG_PATH` points at the system binary
+4. YouTube's JS challenge → `jsRuntimes: 'node'` in [[yt-dlp]]
+
+## Running it now
 
 ```
-sudo shutdown -h now
+journalctl -u tunezbot -f          # watch the log
+sudo systemctl restart tunezbot    # after a git pull
+sudo shutdown -h now               # never pull the power
 ```
 
-Related: [[Raspberry Pi 4 build]] · [[Parts list]] · [[2026-07-27 Pi assembly]]
+Related: [[Raspberry Pi 4 build]] · [[Parts list]] · [[Hosting MOC]]

@@ -34,6 +34,6 @@ Built as a standalone `site/` folder — self-contained HTML, CSS and JS, no bui
 
 Visual identity carried over from the DJ-booth direction: ink-navy ground, Discord blurple from the bot's own avatar, tape-deck amber, phosphor-teal oscilloscope accents, monospace display type. Grounded in the real commands and real setup steps from the README rather than placeholder marketing copy — the page has to survive being read by someone who then goes and uses the thing.
 
-History: shipped once as a quick artifact, then deleted and restarted from scratch, because the point of this project is practising the process rather than generating output → [[2026-07-30 Landing page and vault]].
+History: shipped once as a quick artifact, then deleted and restarted from scratch, because the point of this project is practising the process rather than generating output → [[2026-08-14 Site vault and Pi deployment]].
 
 Related: [[The bot cannot run on Cloudflare]] · [[Hosting MOC]] · [[External links]]

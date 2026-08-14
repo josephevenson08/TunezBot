@@ -16,7 +16,7 @@ Picked up at the line 53 marker and worked down through the event handlers and c
 - `AudioTracksAdd` — playlist handling, the track count report, and why a failed message send must not crash the bot
 - `EmptyQueue` — artist mode continuation, its repeated nature, error logging, and the "could not find another song" fallback → [[Artist Mode]]
 
-A second leave-off marker went in at line 112. The command handlers themselves were picked up the next day → [[2026-07-30 Landing page and vault]].
+A second leave-off marker went in at line 112. The command handlers themselves were picked up the next day → [[2026-08-14 Site vault and Pi deployment]].
 
 ## The pattern in these comments
 

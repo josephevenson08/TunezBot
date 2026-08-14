@@ -24,4 +24,30 @@ yt-dlp → direct media URL → ffmpeg → Opus → Voice Connection → Discord
 
 `ffmpeg-static` avoids the classic "works on my machine" failure where ffmpeg is on the Windows PATH but was never installed on the Pi. On the Pi the alternative is `apt install ffmpeg`, which is what the AWS attempt used → [[AWS hosting postmortem]].
 
+## The catch: `ffmpeg-static` cannot resolve hostnames
+
+Found on the Pi, and it is not Pi-specific — it is a property of the binary.
+
+**A statically linked glibc binary cannot do DNS.** glibc looks up hostnames through NSS, and NSS works by dynamically loading `libnss_dns.so` at runtime — which is exactly what a static binary cannot do. So `ffmpeg-static` decodes local files perfectly and cannot open a single URL:
+
+```
+Failed to resolve hostname rr1---sn-vgqsrnlk.googlevideo.com: System error
+```
+
+Since this bot only ever feeds ffmpeg a **remote URL** from [[yt-dlp]], that makes the bundled binary useless here. It fails silently: zero bytes out, [[discord-player]] reads an empty stream as a finished track, no error event, no log line.
+
+**The fix is `FFMPEG_PATH=/usr/bin/ffmpeg` in `.env`.** `prism-media` checks that variable before reaching for `ffmpeg-static`, and it is per-machine config so Windows keeps using the bundled binary. → [[Environment Secrets]]
+
+## And it needs an Opus encoder alongside it
+
+ffmpeg having `libopus` compiled in is **not** enough. The pipeline is ffmpeg → PCM → Opus encoder → Discord, and that last stage is a separate Node library that `package.json` never listed. Without it, [[Voice Connection]] connects and plays silence.
+
+`@discordjs/voice`'s own diagnostic names it:
+
+```js
+require('@discordjs/voice').generateDependencyReport()
+```
+
+Related: [[Voice Connection]] · [[Raspberry Pi 4 build]] · [[2026-08-14 Site vault and Pi deployment]]
+
 Related: [[Voice Connection]] · [[Raspberry Pi 4 build]] · [[Architecture MOC]]

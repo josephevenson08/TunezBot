@@ -55,6 +55,8 @@ The consistent difference wasn't which video got picked — it was that the sear
 
 **Status at time of writing:** Pi hardware not yet purchased; the setup guide is ready for when it is.
 
+**Update, Aug 14 2026:** the Pi is now built, deployed and hosting the bot, and the theory above has been confirmed by measurement rather than reasoning. The same plain-text search that failed repeatedly on EC2 succeeded on the Pi on four different queries in a row, first try each time. See the August 14 entry.
+
 ## Landing page + static hosting
 
 **Jul 2026**
@@ -100,14 +102,14 @@ Got the parts ordered from pishop.usa, list of which is in the Raspberry pi setu
 - index.js — added a second leave-off marker at LOC 112 for the 7/29 stopping point.
 - The comments are shifting toward saying *why* a line exists instead of restating what it does. A comment that repeats the code is worse than no comment, because now two things have to stay in sync instead of one.
 
-**July 30 — finished the comment pass into the handlers, then built the site and a thought network**
-
-Comment pass, picking up from the LOC 112 marker:
+**July 30 — comment pass, from the LOC 112 marker into the command handlers**
 - index.js — commented /tstopartist.
 - index.js — commented /tloop and /tstoploop.
 - index.js — commented /tskip, then its sub-paths: the catch, what gets shown, and the fallbacks.
 - index.js — commented /treplay: what the function does, the catch block, the string showing what is played, and the error handling.
 - Still left for next time: /trandom through /trelated, the utility functions, and the login call at the bottom.
+
+**August 14 — built the site and a thought network, then finally got the Pi hosting the bot**
 
 Obsidian vault, in TunezBot-Brain/:
 - Built the map of the project as a linked note network instead of a single document — 65 notes, one idea each, roughly 566 links between them. Open the folder as a vault and the graph view is the picture of it.
@@ -126,3 +128,32 @@ Found a real bug while reading index.js to write all this:
 - LOC 19 registers `process.on('unknownRejection')`. Node only ever emits `unhandledRejection`, so that handler can never fire and an unhandled promise rejection now logs nothing at all.
 - This came from the 7/28 change where I reworded "unhandled" to "unknown". The intent was to reword the *message*, but the *event name* got changed with it. The log line and the comment can keep saying "unknown"; the event string has to go back to `unhandledRejection`.
 - Worth remembering as a category: renaming for readability is safe on your own words and unsafe on names an API owns. Nothing failed loudly here — the handler just quietly stopped existing, which is exactly the kind of change a comment pass is supposed to catch rather than cause.
+
+### The Pi deployment, same day
+
+Back on my own internet, so the SSH step that blocked this on July 27 finally worked. Steps 12 through 18 are written up properly in `RASPBERRY_PI_SETUP.md`; this is the part worth remembering rather than the part worth following.
+
+**The AWS theory held up, and now it is measured instead of argued.** The single question this whole hosting detour was about: does plain-text search work from a residential IP? Ran the bot's own `searchYoutube` path from the Pi against four different queries. Four for four, first try each, no retries. On EC2 that same path failed repeatedly on different songs, including one that failed on both the attempt and the retry. That section of this document used to end on a well-reasoned theory. It now ends on evidence, and that is a much better place for it to sit.
+
+**Four separate failures stood between "it logged in" and "I can hear it", and each one hid the next.** That is the real lesson of the day. I kept thinking I was one fix away and I was four.
+
+1. **npm 11 does not run install scripts by default.** `npm install` reported success while `ffmpeg-static` and `youtube-dl-exec` never ran the scripts that download their binaries. A bot that installs cleanly and has no yt-dlp.
+2. **No Opus encoder anywhere in the dependency list.** `@discordjs/voice` cannot encode audio without one and `package.json` never had one. It worked on Windows, so it was invisible until a clean machine. The native encoder will not build on ARM64 with Node 24 — no prebuilt binary, and the source build dies on an ARM NEON compile error — so the pure-JS `opusscript` it is.
+3. **`ffmpeg-static` cannot resolve hostnames.** A statically linked glibc binary cannot use NSS, which is how glibc does DNS. That ffmpeg decodes local files perfectly and cannot open a single URL. The system ffmpeg from apt works, which is what `FFMPEG_PATH` in `.env` is for.
+4. **YouTube guards playback URLs with a JavaScript challenge.** yt-dlp needs a JS engine to solve it and only enables deno by default. Without one it falls back to a client whose URLs only work for yt-dlp's own headers, so ffmpeg gets a 403. Node was already installed, so `jsRuntimes: 'node'` was the whole fix.
+
+**Every one of failures 2, 3 and 4 presented identically: the bot announced the track, then "Queue finished" immediately, with silence and nothing at all in the terminal.** Three unrelated causes, one symptom, no error message. What actually broke the deadlock was running the pipeline by hand outside the bot — resolve a URL with yt-dlp, hand it to ffmpeg, watch what it says. The bot swallowed the error; the command line printed it.
+
+**`noWarnings: true` cost more than it saved.** yt-dlp had been printing *"No supported JavaScript runtime could be found... extraction without a JS runtime has been deprecated"* on every single call, and `createYoutubeStream` was explicitly telling it not to show that. The message that explained failure 4 was being suppressed by an option I added to keep the output tidy. Only saw it because I ran yt-dlp manually.
+
+**Confirmed the `unknownRejection` bug the hard way.** First live `/tplay` arrived expired — Discord gives 3 seconds to acknowledge a command and I had typed it before the bot finished logging in. `deferReply` rejected, and because that handler was registered under an event name Node never emits, the rejection escalated to an uncaught exception and the process exited. One mistyped command took the whole bot offline. Fixing the event name was not enough on its own, because a rejected promise from an async listener does not reliably reach that handler anyway — discord.js routes it through the client's `error` event. So the router is now a named function with a `.catch()` attached at registration. Catch the error where it happens instead of guessing which global handler it lands in.
+
+**Then systemd, which is the actual difference between running and hosted.** `Restart=always` plus `enable` means crash, power cut and reboot all recover on their own with nobody logged in. Three lines in that unit file are load-bearing and all three are documented in the setup guide, `WorkingDirectory` most of all — without it systemd starts in `/`, dotenv finds no `.env`, and the bot cannot log in.
+
+**Where this leaves the project.** The thing works, on hardware in this house, with no terminal open. `PROCESS_MAP.md` has said "Pi hardware not yet purchased" since July. It does not anymore.
+
+Still open:
+- Finish the comment pass — /trandom through /trelated, the utility functions, and login.
+- `deferReply` sits outside the try block in seven handlers. The router-level catch stops the crash, but those handlers still cannot tell the user their command died.
+- 7 npm audit warnings, deliberately left alone until the bot had run properly at least once.
+- Deploy the landing page to Cloudflare.

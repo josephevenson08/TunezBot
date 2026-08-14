@@ -28,9 +28,13 @@ Requirement 4 is the one that is invisible until it bites.
 
 Stage 2 → 3 was a swap for name recognition, at the cost of the free tier being 12 months instead of forever. Stage 3 → 4 was forced by evidence.
 
-## Current status
+## Current status — resolved 2026-08-14
 
-Parts arrived from pishop.us ([[Parts list]]), the Pi is assembled, the SD card is written, and it boots. Setup is paused at the SSH step because it needs to happen on home internet → [[Pi setup progress]].
+**The bot is hosted on the Pi**, running under `systemd`, surviving reboots and power cuts, with no terminal open anywhere → [[Pi setup progress]].
+
+Requirement 4 is now measured rather than reasoned: four search queries, four successes, first try each, from the residential connection. The same path failed repeatedly on EC2 → [[Datacenter IP reputation]].
+
+Getting there took four separate fixes that nothing on x64 would ever surface — blocked npm install scripts, a missing Opus encoder, an ffmpeg binary that cannot resolve hostnames, and YouTube's JavaScript challenge. All four in [[2026-08-14 Site vault and Pi deployment]].
 
 ## The separate, easier problem
 

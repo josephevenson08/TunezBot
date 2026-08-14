@@ -51,3 +51,252 @@ YouTube's bot-detection treats requests from datacenter IP ranges (AWS, Oracle C
 - On my network tunezbot.local resolved to an IPv6 address instead of the usual 192.168.x.x. That is fine, it still works.
 - If it ever fails to resolve, find the Pi's IP on the router's connected devices page and use `ssh josephevenson@<that ip>` instead.
 - If I had not been able to guess the username, it is recoverable by putting the SD card back in the PC and reading custom.toml or userconf.txt on the small bootfs partition. Windows will offer to format the other partition when the card goes in — do NOT do that, that is the Linux install.
+
+13. Updated the OS before installing anything.
+
+```bash
+sudo apt update && sudo apt full-upgrade -y
+```
+
+- Asks for the password again. That is `sudo`, not SSH.
+- If it pulls a new kernel, `sudo reboot`, wait about 30 seconds, and SSH back in.
+
+14. Installed what the bot needs.
+
+```bash
+sudo apt install -y git python3 ffmpeg
+```
+
+- **git** to clone the repo.
+- **python3** because yt-dlp is a Python program. The binary npm downloads is a Python zipapp and will not run without it.
+- **ffmpeg** — I thought this was belt-and-braces since the project ships `ffmpeg-static`. It turned out to be the only ffmpeg that works here. See the problems section below.
+
+Then Node, from NodeSource rather than nvm:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v && npm -v && which node
+```
+
+- I used nvm on the AWS attempt. NodeSource is the better choice here because it puts node at `/usr/bin/node`, and the systemd service in step 18 needs an absolute path that does not change every time Node updates. nvm hides node inside a versioned folder in my home directory and systemd cannot find it.
+- Got v24.19.0 and `/usr/bin/node`. Write that path down, step 18 needs it.
+- If `setup_24.x` 404s, use `setup_22.x`. Anything 18 or newer runs this bot.
+
+15. Cloned the repo and installed the dependencies.
+
+```bash
+cd ~ && git clone https://github.com/josephevenson08/TunezBot.git && cd TunezBot
+free -h
+npm install
+```
+
+- `free -h` first because this is a 1GB board and `npm install` is the heaviest moment. Mine showed 748Mi available plus 904Mi of swap, which is plenty. The number to read is **available**, not **free** — the buff/cache column is memory the kernel hands back the moment something needs it.
+- If `npm install` prints `Killed` or just stops dead, that is the out-of-memory killer, not a broken package. Raise swap with `sudo dphys-swapfile swapoff`, set `CONF_SWAPSIZE=1024` in `/etc/dphys-swapfile`, then `sudo dphys-swapfile setup && sudo dphys-swapfile swapon` and install again.
+- Do NOT run npm with sudo. It leaves root-owned files in node_modules that break later updates.
+
+16. Made the `.env` file.
+
+```bash
+nano .env
+```
+
+Four lines:
+
+```
+DISCORD_TOKEN=your token
+CLIENT_ID=your application id
+GUILD_IDS=your server id
+FFMPEG_PATH=/usr/bin/ffmpeg
+```
+
+`Ctrl+O`, Enter, `Ctrl+X` to save and exit.
+
+- The token is the only one of the three you cannot look up again. Discord shows it once. If you do not have it saved, go to the Developer Portal, Bot tab, **Reset Token**, and copy it right then. Resetting is free and it invalidates the old one.
+- CLIENT_ID is the Application ID on the General Information page.
+- GUILD_IDS is the server ID. Turn on Developer Mode in Discord settings under Advanced, then right click the server icon and Copy Server ID.
+- FFMPEG_PATH is a Pi-specific line and is explained in the problems section.
+- Check it worked with `ls -la .env && git status --short`. `.env` should exist and git should say nothing about it. If git lists `.env` as untracked, stop — the token is one `git add -A` away from being public.
+
+17. Registered the commands and ran it.
+
+```bash
+npm run deploy
+npm start
+```
+
+- `npm run deploy` should say it deployed 17 commands to 1 server.
+- `npm start` should print `Logged in as TunezBot#....`
+- **Wait for that line before typing anything in Discord.** Discord only gives the bot 3 seconds to acknowledge a command, so a `/tplay` typed before the bot is listening arrives already expired and comes back as `DiscordAPIError[10062] Unknown interaction`. I lost a while to this thinking it was a real bug.
+- Then join a voice channel first, then run `/tplay never gonna give you up`.
+
+18. Made it survive reboots with systemd. This is the step that turns "running on a Pi" into "hosted on a Pi".
+
+Stop the manually started bot with `Ctrl+C` first, otherwise there will be two copies running and they will fight over every command.
+
+```bash
+sudo nano /etc/systemd/system/tunezbot.service
+```
+
+```
+[Unit]
+Description=TunezBot Discord music bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=josephevenson
+WorkingDirectory=/home/josephevenson/TunezBot
+ExecStart=/usr/bin/node /home/josephevenson/TunezBot/index.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload && sudo systemctl enable tunezbot && sudo systemctl start tunezbot
+systemctl status tunezbot
+```
+
+Want to see `enabled` and `active (running)`. Press `q` to get out of that screen.
+
+The three lines that matter:
+
+- **WorkingDirectory** — dotenv reads `.env` relative to the working directory. Without this line systemd starts in `/` and none of the four values load.
+- **User** — runs as me, not root. node_modules belongs to me and a music bot has no reason to be root.
+- **Restart=always** — the actual point. Crash, power cut, reboot, it comes back on its own. Paired with `enable` it also starts at boot with nobody logged in.
+
+Watching the log, this replaces the `npm start` output:
+
+```bash
+journalctl -u tunezbot -f
+```
+
+`Ctrl+C` leaves the log view without stopping the bot.
+
+Updating the bot from now on:
+
+```bash
+cd ~/TunezBot && git pull && sudo systemctl restart tunezbot
+```
+
+Final test: close the SSH window completely, then run `/tplay` from Discord. Music with no terminal open anywhere means it is genuinely hosted. Pulling the power and plugging it back in is worth trying too — it should come back on its own in about two minutes.
+
+## Problems I hit on the Pi that never happened on Windows
+
+All three of these only show up on a clean machine on ARM. None of them are in the README because nothing on x64 ever hits them.
+
+**1. npm blocked the install scripts, so two binaries never downloaded.**
+
+`npm install` said it succeeded, but ended with a warning that `ffmpeg-static` and `youtube-dl-exec` had install scripts "not yet covered by allowScripts". npm 11 does not run package install scripts by default anymore. Those two scripts are exactly what download the yt-dlp and ffmpeg binaries, so neither existed. The bot would have started fine and failed on the first `/tplay` with a confusing file-not-found.
+
+Fix, one package at a time — `npm approve-scripts --allow-scripts-pending` only lists them, it does not approve anything:
+
+```bash
+npm approve-scripts youtube-dl-exec
+npm approve-scripts ffmpeg-static
+npm approve-scripts esbuild
+rm -rf node_modules && npm install
+```
+
+The approvals get written into `package.json`, so this is now committed and nobody cloning this repo has to do it again.
+
+Check it worked:
+
+```bash
+ls -la node_modules/youtube-dl-exec/bin/ node_modules/ffmpeg-static/
+```
+
+yt-dlp should be about 3MB and ffmpeg about 51MB, both executable.
+
+**2. No Opus encoder, so the bot played silence.**
+
+Tracks resolved, the bot announced "Now playing", and then "Queue finished" landed immediately with no sound and nothing in the terminal. `@discordjs/voice` cannot encode audio without an Opus library and `package.json` never listed one.
+
+The diagnostic that names it:
+
+```bash
+node -e "console.log(require('@discordjs/voice').generateDependencyReport())"
+```
+
+The native encoder `@discordjs/opus` will not install on this board: there is no prebuilt binary for ARM64 on Node 24, and the source build fails compiling an ARM NEON file (`implicit declaration of function 'celt_inner_prod_neon'`). That is upstream, not fixable from here.
+
+The pure-JavaScript encoder works with no compiler involved:
+
+```bash
+npm install opusscript
+```
+
+It uses more CPU than the native one, which is fine for the single stream this bot ever plays. If it ever is not, dropping to Node 22 would probably get a prebuilt binary.
+
+**3. ffmpeg-static cannot resolve hostnames.**
+
+Same silent symptom. Running the pipeline by hand is what found it:
+
+```bash
+URL=$(./node_modules/youtube-dl-exec/bin/yt-dlp -f bestaudio --get-url "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+./node_modules/ffmpeg-static/ffmpeg -i "$URL" -t 5 -f null -
+```
+
+```
+Failed to resolve hostname rr1---sn-vgqsrnlk.googlevideo.com: System error
+```
+
+`ffmpeg-static` ships a statically linked binary, and a statically linked glibc cannot use NSS, which is how glibc looks up hostnames. It can decode a local file perfectly and cannot reach a single URL. The system ffmpeg from step 14 is dynamically linked and works, which is what `FFMPEG_PATH=/usr/bin/ffmpeg` in `.env` is for. prism-media checks that variable before it reaches for `ffmpeg-static`, and it is per-machine config so Windows keeps using the bundled binary.
+
+**4. YouTube's JavaScript challenge (this one is not Pi-specific).**
+
+With the system ffmpeg the error changed from a DNS failure to `403 Forbidden`. YouTube protects playback URLs with a JavaScript challenge and yt-dlp needs a JS engine to solve it. Without one it falls back to a client whose URLs only work for yt-dlp's own headers, so ffmpeg gets refused. yt-dlp had been printing a warning about this the whole time and `noWarnings: true` in the code was hiding it.
+
+yt-dlp only enables deno by default, but Node is already installed, so `jsRuntimes: 'node'` in `createYoutubeStream` fixes it. That is committed, so this one needs nothing done by hand.
+
+## Moving the bot to another server, or adding a second one
+
+The bot is per-server by design, and all of its state — queue, history, artist mode — is keyed by server ID, so it can sit in more than one at a time without them interfering.
+
+**1. Invite the bot to the new server.**
+
+Developer Portal → your application → **OAuth2** → **URL Generator**. Scopes `bot` and `applications.commands`. Permissions: View Channels, Send Messages, Connect, Speak, Use Voice Activity. Open the generated URL and pick the server. You need permission to add bots to that server.
+
+**2. Get the new server's ID.**
+
+Discord → Settings → Advanced → Developer Mode on. Right click the server icon → Copy Server ID.
+
+**3. Add it to GUILD_IDS.**
+
+```bash
+nano ~/TunezBot/.env
+```
+
+Comma separated, no spaces needed:
+
+```
+GUILD_IDS=111111111111111111,222222222222222222
+```
+
+To *move* rather than add, just replace the old ID.
+
+**4. Redeploy the commands.**
+
+```bash
+cd ~/TunezBot && npm run deploy
+```
+
+Commands show up in the new server within about a minute.
+
+**No restart is needed.** `index.js` only ever reads `DISCORD_TOKEN`; `CLIENT_ID` and `GUILD_IDS` are used solely by `deploy-commands.js`. So changing which servers the commands go to does not affect the running bot at all.
+
+**The gotcha when removing a server.** Deleting an ID from `GUILD_IDS` does not remove the commands from that server. The deploy only touches servers in the list, so a server you dropped keeps its commands and the bot will still answer them as long as it is a member. To actually stop serving a server, kick the bot from it.
+
+Also worth knowing: commands are registered per server on purpose. They appear in about a minute that way, versus up to an hour for global registration. The trade is that a new server needs a redeploy, which for a personal bot is the right way round.
+
+## Shutting the Pi down
+
+```bash
+sudo shutdown -h now
+```
+
+Pulling the power on a running Pi risks corrupting the SD card that holds the whole OS. With systemd set up, a reboot is fine — the bot comes back on its own.

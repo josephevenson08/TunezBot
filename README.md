@@ -140,7 +140,53 @@ Join a voice channel in your server and try:
 /tstop
 ```
 
+## 6. Using it in another server
+
+The bot keeps its queue, history and artist mode separately per server, so it can sit in several at once without them interfering.
+
+**Add a server:**
+
+1. **Invite the bot.** Developer Portal → **OAuth2 → URL Generator**, same scopes and permissions as step 4, then open the URL and pick the server.
+2. **Copy the new server ID.** Developer Mode on, right-click the server icon, **Copy Server ID**.
+3. **Add it to `GUILD_IDS`** in `.env`, comma-separated:
+
+   ```env
+   GUILD_IDS=111111111111111111,222222222222222222
+   ```
+
+4. **Redeploy:**
+
+   ```powershell
+   npm run deploy
+   ```
+
+Commands appear in the new server within about a minute.
+
+**Move to a different server** instead of adding: replace the old ID rather than appending, then redeploy.
+
+**You do not need to restart the bot.** `index.js` only reads `DISCORD_TOKEN`. `CLIENT_ID` and `GUILD_IDS` are used solely by `deploy-commands.js`, so changing which servers get the commands doesn't affect a running bot.
+
+**Removing a server is not just deleting the ID.** `npm run deploy` only touches servers listed in `GUILD_IDS`, so a server you drop from the list keeps its commands and the bot will still answer them while it's a member. To actually stop serving a server, kick the bot from it.
+
+Commands are registered per-server rather than globally on purpose: they appear in about a minute that way, versus up to an hour for global registration. The trade-off is that a new server needs a redeploy.
+
 ## Notes
+
+**Audio needs an Opus encoder.** `opusscript` is in the dependency list for this reason — without an Opus library, `@discordjs/voice` connects to voice and plays silence, with no error. For better performance you can additionally install the native encoder, which `@discordjs/voice` prefers automatically when present:
+
+```powershell
+npm install @discordjs/opus
+```
+
+It's optional, and it does not build on ARM64 with Node 24 — see [Raspberry Pi Setup](RASPBERRY_PI_SETUP.md) if you're deploying there.
+
+**npm 11 and newer blocks package install scripts by default.** `ffmpeg-static` and `youtube-dl-exec` use theirs to download the ffmpeg and yt-dlp binaries, so without them the bot installs cleanly and then fails at playback. The approvals are committed in `package.json` under `allowScripts`, so a normal `npm install` handles it. If you ever see a warning about scripts "not yet covered by allowScripts", approve them by name and reinstall:
+
+```powershell
+npm approve-scripts youtube-dl-exec
+rm -r node_modules
+npm install
+```
 
 Music extractors can break when providers change their sites. TunezBot uses `discord-player-youtubei` and `youtube-dl-exec` for YouTube playback. If YouTube links stop resolving later, update dependencies with:
 

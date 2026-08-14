@@ -31,7 +31,8 @@ tags:
 
 ## Currently
 
-- Pi hardware is assembled and boots; setup paused at the SSH step. → [[Pi setup progress]]
-- Landing page rebuilt from scratch. → [[2026-07-30 Landing page and vault]]
-- Comment revision pass through `index.js` is in progress. → [[2026-07-29 Comment pass]]
+- **The bot is live on the Pi**, under `systemd`, surviving reboots. → [[Pi setup progress]]
+- The residential-IP theory is confirmed by measurement, not just reasoning. → [[Datacenter IP reputation]]
+- Landing page built; not yet deployed. → [[Landing page and bot are separate problems]]
+- Comment revision pass through `index.js` is still unfinished. → [[2026-07-30 Comment pass into handlers]]
 - Open threads live in [[Open questions]].

@@ -8,6 +8,8 @@ tags:
 
 The single most important thing learned on this project, and the one least likely to appear in any tutorial.
 
+> **Confirmed 2026-08-14.** This started as a theory inferred from AWS failures. It has since been tested directly: the bot's own `searchYoutube` path, run from the Pi on a residential connection, succeeded on **four different queries, four for four, first try, no retries**. The same path on EC2 failed repeatedly on different songs. → [[2026-08-14 Site vault and Pi deployment]]
+
 ## The finding
 
 **YouTube treats requests from cloud provider IP ranges differently from requests from home internet connections.** AWS, GCP, Azure, Oracle and DigitalOcean ranges are all well-documented as flagged. A residential ISP address is not.
