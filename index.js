@@ -55,35 +55,53 @@ function getSessionHistory(guildId) {
 }
 // ------------------------------------------left off here on 7/28------------------------------------------
 
-// Use yt-dlp to get a direct playable YouTube audio stream
-// yt-dlp is used to extract media from youtube, in this case, and return it without downloading the file.
-async function createYoutubeStream(track) {
-  const output = await youtubeDl(track.url, {
-    getUrl: true, // get url
-    format: track.live ? 'best[height<=360]' : 'bestaudio', //grabs audio-only stream, doesnt need a video stream, that would be extra data
-    // YouTube guards playback URLs with a JavaScript challenge. With no JS engine to solve
-    // it, yt-dlp falls back to a client whose URLs only work for yt-dlp's own headers, so
-    // ffmpeg gets a 403 fetching them. That shows up as a track that starts and instantly
-    // ends with no error logged anywhere, which is a miserable thing to debug. yt-dlp only
-    // enables deno by default, so point it at the node already running this bot.
+// Pipe the audio out of yt-dlp directly, instead of asking it for a URL and handing that
+// URL to ffmpeg.
+//
+// Why this changed. It used to use getUrl and return a link. yt-dlp could fetch that link
+// itself, but ffmpeg fetching the same link is a separate request that does not inherit
+// yt-dlp's session, and YouTube answers it with 403. ffmpeg then produced zero bytes, and
+// discord-player cannot tell an empty stream from a track that finished - so the bot
+// announced the song and instantly said "Queue finished", with no error anywhere. That one
+// silent failure cost most of a day.
+//
+// Writing to stdout removes the second request entirely. yt-dlp does all the fetching with
+// the session it already has, and ffmpeg just reads bytes off a pipe. Verified on the pi:
+// piping delivers the full 3.27MiB.
+//
+// jsRuntimes matters and is not optional. YouTube guards playback with a JavaScript
+// challenge, and yt-dlp needs a JS engine to solve it - it only enables deno by default, so
+// this points it at the node already running the bot. Without it, downloads fail 403.
+function createYoutubeStream(track) {
+  const subprocess = youtubeDl.exec(track.url, {
+    output: '-', // write the audio to stdout
+    format: track.live ? 'best[height<=360]' : 'bestaudio', // audio only, no video data to throw away
     jsRuntimes: 'node',
-    noWarnings: true, //no warnings, don't need to see it
-    noProgress: true, //same reason as noWarnings
+    noWarnings: true,
+    noProgress: true,
+    quiet: true, // keep stderr clean, stdout is carrying audio
   });
 
-  // converts into a string, whitespaces reduced, and splits on new line.
-  return String(output).trim().split(/\r?\n/)[0];
+  // execa rejects this promise when yt-dlp exits non-zero. Nothing awaits it, so without a
+  // catch here a failed track becomes an unhandled rejection instead of a log line.
+  subprocess.catch((error) => {
+    if (!subprocess.killed) {
+      console.error('yt-dlp stream failed:', error.shortMessage || error.message);
+    }
+  });
+
+  return subprocess.stdout;
 }
 
-// Wraps createYoutubeStream to log how long yt-dlp took. The first track of a session
-// keeps failing while later ones play, with nothing logged — which is the shape of a
-// timeout, not an error. yt-dlp is a python zipapp that has to unpack and byte-compile
-// on its first run, so this prints whether that first call is genuinely slow.
+// Logs how long it takes to hand back a stream. This used to report 5-9 seconds, because
+// the old version waited for yt-dlp to finish resolving a URL before anything could start.
+// Now that it pipes, this should be a few milliseconds - spawning a process, not waiting on
+// one. If this number goes back up, something has gone back to blocking.
 async function createYoutubeStreamTimed(track) {
   const startedAt = Date.now();
   try {
     const url = await createYoutubeStream(track);
-    console.log(`yt-dlp resolved a stream in ${Date.now() - startedAt}ms`);
+    console.log(`yt-dlp stream ready in ${Date.now() - startedAt}ms`);
     return url;
   } catch (error) {
     console.error(`yt-dlp failed after ${Date.now() - startedAt}ms:`, error.message);
