@@ -58,9 +58,15 @@ function getSessionHistory(guildId) {
 // Use yt-dlp to get a direct playable YouTube audio stream
 // yt-dlp is used to extract media from youtube, in this case, and return it without downloading the file.
 async function createYoutubeStream(track) {
-  const output = await youtubeDl(track.url, { 
+  const output = await youtubeDl(track.url, {
     getUrl: true, // get url
     format: track.live ? 'best[height<=360]' : 'bestaudio', //grabs audio-only stream, doesnt need a video stream, that would be extra data
+    // YouTube guards playback URLs with a JavaScript challenge. With no JS engine to solve
+    // it, yt-dlp falls back to a client whose URLs only work for yt-dlp's own headers, so
+    // ffmpeg gets a 403 fetching them. That shows up as a track that starts and instantly
+    // ends with no error logged anywhere, which is a miserable thing to debug. yt-dlp only
+    // enables deno by default, so point it at the node already running this bot.
+    jsRuntimes: 'node',
     noWarnings: true, //no warnings, don't need to see it
     noProgress: true, //same reason as noWarnings
   });
