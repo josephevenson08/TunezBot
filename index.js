@@ -94,8 +94,11 @@ function createYoutubeStream(track) {
   // execa rejects this promise when yt-dlp exits non-zero. Nothing awaits it, so without a
   // catch here a failed track becomes an unhandled rejection instead of a log line.
   subprocess.catch((error) => {
-    if (subprocess.killed) {
-      return; // we killed it ourselves, e.g. the track was skipped
+    // killed and signalCode live on the error, not on the subprocess - youtube-dl-exec uses
+    // tinyspawn rather than execa. Checking the wrong one meant every skipped or finished
+    // track would have logged a failure it did not have.
+    if (error.killed || error.signalCode === 'SIGTERM' || error.signalCode === 'SIGPIPE') {
+      return; // normal end of track: discord-player closed the pipe, or we skipped it
     }
 
     // error.stderr is where yt-dlp actually explains itself. Without it this logs an exit
