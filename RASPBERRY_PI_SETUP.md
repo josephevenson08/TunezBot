@@ -271,7 +271,7 @@ mv node_modules/ffmpeg-static/ffmpeg node_modules/ffmpeg-static/ffmpeg.static-br
 ln -s /usr/bin/ffmpeg node_modules/ffmpeg-static/ffmpeg
 ```
 
-**The real fix is to remove `ffmpeg-static` from package.json entirely** and install ffmpeg from the OS on every platform, since its Linux build cannot do what this bot needs. Not done yet.
+**Done — `ffmpeg-static` has been removed from package.json entirely.** Every platform now uses an OS-installed ffmpeg (`sudo apt install ffmpeg` here, `winget install ffmpeg` on Windows). With the package gone, prism-media falls through to `ffmpeg` on PATH, which is the working one. The symlink workaround above is no longer needed — `git pull && npm install` removes the package and the symlink with it.
 
 The lesson: setting a config value is not the same as the program reading it. `FFmpeg.getInfo().command` was one line and would have caught this immediately.
 

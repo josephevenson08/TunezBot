@@ -103,7 +103,27 @@ Select these bot permissions:
 
 Open the generated URL and choose your server. You need permission to add apps/bots to that server.
 
-## 5. Register commands and run
+## 5. Install ffmpeg, register commands, and run
+
+**ffmpeg has to be installed on the machine.** It is what converts the audio into the format Discord accepts, and it is not an npm package.
+
+```powershell
+winget install ffmpeg
+```
+
+On a Raspberry Pi or any Debian/Ubuntu machine:
+
+```bash
+sudo apt install -y ffmpeg
+```
+
+Confirm it's on your PATH — you should get a version number, not "not recognized":
+
+```powershell
+ffmpeg -version
+```
+
+*(This project used to bundle `ffmpeg-static` so there was nothing to install. That was removed: its Linux build is statically linked, and a statically linked glibc binary cannot resolve hostnames — so it can decode a local file but cannot open a single URL, which is all this bot ever asks it to do. It failed silently, producing a bot that announced songs and played nothing. Details in [Raspberry Pi Setup](RASPBERRY_PI_SETUP.md).)*
 
 Requires Node.js 18 or newer. From this folder:
 
@@ -180,7 +200,7 @@ npm install @discordjs/opus
 
 It's optional, and it does not build on ARM64 with Node 24 — see [Raspberry Pi Setup](RASPBERRY_PI_SETUP.md) if you're deploying there.
 
-**npm 11 and newer blocks package install scripts by default.** `ffmpeg-static` and `youtube-dl-exec` use theirs to download the ffmpeg and yt-dlp binaries, so without them the bot installs cleanly and then fails at playback. The approvals are committed in `package.json` under `allowScripts`, so a normal `npm install` handles it. If you ever see a warning about scripts "not yet covered by allowScripts", approve them by name and reinstall:
+**npm 11 and newer blocks package install scripts by default.** `youtube-dl-exec` uses its install script to download the yt-dlp binary, so without it the bot installs cleanly and then fails at playback. The approvals are committed in `package.json` under `allowScripts`, so a normal `npm install` handles it. If you ever see a warning about scripts "not yet covered by allowScripts", approve them by name and reinstall:
 
 ```powershell
 npm approve-scripts youtube-dl-exec
