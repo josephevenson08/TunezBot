@@ -16,7 +16,10 @@ if (!DISCORD_TOKEN) {
 }
 
 // Log any other errors instead of having no reasonable output, useful for troubleshooting.
-process.on('unknownRejection', (reason) => {
+// The event name must stay exactly 'unhandledRejection' — that string is Node's, not mine,
+// so it cannot be reworded. Renaming it to 'unknownRejection' silently unregistered this
+// handler, and one expired Discord interaction then took the whole bot offline.
+process.on('unhandledRejection', (reason) => {
   console.error('Unknown rejection:', reason);
 });
 
