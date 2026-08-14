@@ -10,7 +10,9 @@ aliases:
 
 The workhorse. Reached through the `youtube-dl-exec` npm wrapper, which shells out to a real `yt-dlp` binary as a child process. Does **two** jobs here.
 
-## Job 1 — get a stream URL
+> **Rewritten 2026-08-14.** Job 1 below describes the *old* design — asking for a URL and handing it to [[ffmpeg]]. That was the cause of the silent-playback bug: ffmpeg fetching the URL is a **separate request that does not inherit yt-dlp's session**, and YouTube answers it 403. The bot now pipes audio out of yt-dlp instead. See *Piping* below.
+
+## Job 1 — get a stream URL *(superseded)*
 
 ```js
 const output = await youtubeDl(track.url, {
@@ -36,9 +38,48 @@ Since Node is already running the bot, pointing yt-dlp at it costs nothing. Conf
 
 **`noWarnings: true` hid this for hours.** yt-dlp prints *"No supported JavaScript runtime could be found"* on every call, and this function explicitly suppresses warnings. The message explaining the failure was being silenced by an option added to keep the output tidy. → [[2026-08-14 Site vault and Pi deployment]]
 
-### The deeper point about `getUrl`
+## Piping — the current design
 
-Handing a URL to another program is inherently fragile: the URL can be bound to the requester's IP, headers, or client type. Piping yt-dlp's own output would avoid the entire class of problem. `getUrl` works today, and it is worth knowing *why* it can stop working. → [[Open questions]]
+```js
+youtubeDl.exec(track.url, {
+  output: '-',              // audio to stdout
+  format: 'bestaudio',
+  jsRuntimes: 'node',       // load-bearing, see below
+  noCacheDir: true,
+  noProgress: true,
+});
+```
+
+yt-dlp writes audio to stdout, [[ffmpeg]] reads bytes off a pipe, and **ffmpeg never contacts YouTube at all**. That removes four problems at once: the 403 handoff, URL expiry, IP binding, and the 5–9 second stall (resolving blocked before anything could start; spawning a pipe takes 11ms).
+
+Three tests that settled it, same video, same minute:
+
+| | Result |
+| --- | --- |
+| yt-dlp downloads it itself | 3,433,755 bytes |
+| `--get-url` then ffmpeg | **403 Forbidden** |
+| `-o -` piped | 3,433,755 bytes |
+
+### `jsRuntimes: 'node'` is required
+
+YouTube guards playback with a JavaScript challenge; yt-dlp needs a JS engine to solve it and only enables `deno` by default. Node is already running the bot, so it costs nothing. Without it: `without flag: FAILED / with flag: OK`.
+
+I once concluded this flag was inert, from a test that compared a value identical either way. It wasn't. → [[Open questions]]
+
+### One yt-dlp at a time
+
+Piping made yt-dlp long-lived — it stays connected for the whole song instead of five seconds. And **YouTube refuses two simultaneous media fetches from one address**, taking down both:
+
+| | Result |
+| --- | --- |
+| One fetch alone | 4,000,874 bytes |
+| Two started together | 0 and 0 |
+
+So every new track collided with the previous song's still-running process. The fix is killing it first — this bot plays one thing at a time, so a surviving process belongs to the song we just left. A retry sits behind that as a genuine safety net.
+
+**The tell was that the retry fired on *every* track, not occasionally.** A safety net catching everything means everything is falling.
+
+Related: [[ffmpeg]] · [[2026-08-14 Site vault and Pi deployment]]
 
 ## Job 2 — search
 

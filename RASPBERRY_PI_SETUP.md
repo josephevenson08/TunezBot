@@ -279,18 +279,20 @@ The lesson: setting a config value is not the same as the program reading it. `F
 
 With the system ffmpeg the error changed from a DNS failure to `403 Forbidden`. YouTube protects playback URLs with a JavaScript challenge and yt-dlp needs a JS engine to solve it. Without one it falls back to a client whose URLs only work for yt-dlp's own headers, so ffmpeg gets refused. yt-dlp had been printing a warning about this the whole time and `noWarnings: true` in the code was hiding it.
 
-**Correction — this was a misdiagnosis, and the fix for it does nothing.** I added `jsRuntimes: 'node'` to `createYoutubeStream` assuming `youtube-dl-exec` converts camelCase keys into kebab-case flags. It does not pass that one through. Proved it by asking for the URL both ways and reading the client out of the `c=` parameter:
+**`jsRuntimes: 'node'` is required and it does work.** I wrote a correction here earlier saying it was inert and never reached yt-dlp. **That correction was itself wrong** — I am leaving this note rather than quietly deleting it, because the way I got it wrong is the useful part.
+
+I "tested" the flag by asking for a URL with and without it and comparing the `c=` parameter. Both said `ANDROID_VR`, so I concluded the flag did nothing. But `c=` is `ANDROID_VR` either way — that test could not distinguish anything, and I drew a confident conclusion from it regardless.
+
+Testing the thing that actually matters, whether the download succeeds:
 
 ```
-client without option: ANDROID_VR
-client with option:    ANDROID_VR
+without flag: FAILED
+with flag:    OK    (3,433,755 bytes)
 ```
 
-Identical. The flag never reached yt-dlp, so that commit changed nothing.
+The flag is load-bearing. Without it YouTube answers 403.
 
-The 403 was almost certainly the DNS fault below instead — `googlevideo` URLs are bound to the IP that requested them, and a resolver returning inconsistent address families breaks that. Once DNS was fixed, `--get-url` piped into ffmpeg decoded fine **with no js-runtimes flag at all**.
-
-`jsRuntimes: 'node'` is still in `index.js`. It is inert, not harmful, and should either be made to work or removed.
+**Lesson:** a test that cannot fail is not a test. Check that your discriminator actually discriminates before you trust what it tells you.
 
 **5. DNS was the real problem, and it caused most of the day.**
 
@@ -326,6 +328,39 @@ sudo systemctl restart NetworkManager
 Lookups went from 5.029s to 0.041s. `single-request-reopen` makes glibc send the two queries sequentially on separate sockets instead of in parallel on one.
 
 **This is the most transferable thing on this page.** "Works, then does not, then does" on a home network is very often DNS, and `getent ahosts` versus `ahostsv4`/`ahostsv6` catches it in thirty seconds.
+
+**6. The silent failure that cost the most: handing ffmpeg a URL.**
+
+`createYoutubeStream` used to ask yt-dlp for a URL and give that URL to ffmpeg. yt-dlp can fetch its own URL fine, but ffmpeg fetching it is a **separate request that does not inherit yt-dlp's session**, and YouTube answers it 403. ffmpeg produced zero bytes, and discord-player cannot tell an empty stream from a track that finished — so the bot announced the song, said "Queue finished" immediately, and logged nothing at all.
+
+Three tests, same video, same minute:
+
+```
+yt-dlp downloads it itself      works, 3,433,755 bytes
+yt-dlp --get-url then ffmpeg    403 Forbidden
+yt-dlp -o -  piped              works, 3,433,755 bytes
+```
+
+So the bot now pipes: yt-dlp writes audio to stdout and ffmpeg reads bytes off a pipe, never talking to YouTube at all. That removed the 403, the URL expiry, the IP binding **and** the stall — resolving a URL blocked for 5–9 seconds before anything could start, and spawning a pipe takes 11ms.
+
+**7. YouTube refuses two simultaneous fetches from one address.**
+
+A consequence of piping. Asking for a URL meant yt-dlp ran for five seconds and exited; piping means it stays connected for the whole song, so tracks overlap where they never used to. Measured:
+
+```
+one fetch alone       4,000,874 bytes
+two started together  0 bytes and 0 bytes
+```
+
+It takes down *both*, not just the later one. This is why queue advances were the flakiest thing of all.
+
+First fix was a retry: if a stream produces no bytes at all, spawn it again after 2 seconds, up to three attempts. It worked — but the log then showed attempt 1 failing on **every single track** rather than occasionally, which meant whatever it collided with was always present.
+
+It was the previous song's yt-dlp, still connected. So the real fix is to kill it: this bot plays one thing at a time, so any yt-dlp still running when a new track starts belongs to the song we just left and is doing nothing but holding a connection against us.
+
+That took a track from ~14 seconds to audio (6s wasted extraction + 2s backoff + 6s real extraction) back down to ~6, and turned the retry into what it was meant to be — a safety net for the occasional genuine failure, rather than a toll paid on every track.
+
+**Worth noticing as a pattern:** "fails occasionally" and "fails every time" are different diagnoses. A retry that always fires is not resilience, it is a fixed cost hiding a bug. If a safety net catches everything, look at why everything is falling.
 
 ## Moving the bot to another server, or adding a second one
 

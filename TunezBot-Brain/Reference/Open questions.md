@@ -37,13 +37,17 @@ Fixing the name was **not sufficient** — a rejected promise from an async even
 
 **No permission model.** Anyone who can use slash commands can control playback. Fine for a private server, the first thing to fix for anything larger. → [[TunezBot]]
 
+## Solved, kept for the reasoning
+
+**The silent playback failure.** ~~Track announced, "Queue finished" immediately, no sound, nothing logged.~~ **Fixed 2026-08-14.** Cause: `createYoutubeStream` handed ffmpeg a URL, and ffmpeg fetching it is a separate request that doesn't inherit yt-dlp's session → 403 → zero bytes → and [[discord-player]] cannot tell an empty stream from a finished track, so no error event fired. Now pipes instead. Also killed the 5–9s stall: `5705ms → 11ms`. → [[yt-dlp]]
+
+**Two yt-dlp processes at once = both fail.** Piping made yt-dlp stay connected for the whole song, so tracks overlapped. One fetch: 4,000,874 bytes. Two at once: 0 and 0. Fixed by killing the previous track's process before starting the next, with a retry behind it.
+
+**The extractor's own streaming is broken here, not just on AWS.** Removing `createStream` produces `ERR_NO_RESULT` on a residential IP — the same error the [[AWS hosting postmortem]] attributes to datacenter IP ranges. So the yt-dlp override was load-bearing all along, not a workaround that could be retired. That postmortem's conclusion isn't wrong; the error just had two causes and only one was the IP.
+
 ## Platform
 
-**yt-dlp costs 5–9 seconds per track.** The biggest ugly thing left. Measured: 5.7s by hand, 9.4s inside the bot, and `--extractor-args` variants only reached 5.1s — the cost is Python starting up on a slow ARM core, not the network. No longer fatal now that nothing races it, but every track pays it before a byte of audio moves.
-
-Two dead ends already tried: extractor args (no real gain), and removing the override entirely so the extractor streams via `youtubei.js` (fails outright with `ERR_NO_RESULT`). A third option not yet tried: piping yt-dlp's stdout instead of resolving a URL first, so bytes flow immediately. `-o -` returned 0 bytes when tested, but always with stderr suppressed — worth retesting properly. → [[yt-dlp]]
-
-**The extractor's own streaming is broken here, not just on AWS.** Removing `createStream` produces `ERR_NO_RESULT` on a residential IP — the same error the [[AWS hosting postmortem]] attributes to datacenter IP ranges. So the yt-dlp override was load-bearing all along, not a workaround that could be retired. This slightly reframes that postmortem: the error had two causes and only one of them was the IP.
+**yt-dlp still costs ~6 seconds per track.** Python starting up on a slow ARM core, not the network — `--extractor-args` variants only moved 5.7s to 5.1s. It no longer blocks anything (the pipe spawns in 11ms and extraction happens while ffmpeg waits), but it's the delay between typing a command and hearing music. Untried: caching resolved tracks, or pre-warming on `/tqueue` so the next track is ready before it's needed.
 
 **`opusscript` instead of the native encoder.** The pure-JS encoder uses more CPU than `@discordjs/opus`. Fine for one stream on a Pi 4. If it ever isn't, dropping to Node 22 would probably get a prebuilt native binary — but measure with `htop` before assuming. → [[2026-08-14 Site vault and Pi deployment]]
 

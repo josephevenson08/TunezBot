@@ -217,6 +217,54 @@ The pattern behind it: **I believed a fix worked because the symptom went away.*
 
 What actually moved things forward, without exception, was measurement — `5.029s`, `110ms on arrival / 5351ms by failure`, `9404ms`, `ANDROID_VR` twice — and one observation that came from watching the bot instead of the logs: it was leaving the voice channel.
 
+### August 14, third session — the silent failure, finally
+
+Came back to finish it. The bot was hosted and surviving reboots but still would not reliably play a song, and the failure was always the same shape: announce the track, say "Queue finished" immediately, no sound, nothing in the log.
+
+**The cause was handing ffmpeg a URL.** `createYoutubeStream` asked yt-dlp for a link and gave that link to ffmpeg. yt-dlp can fetch its own link fine — but ffmpeg fetching it is a **separate request that does not inherit yt-dlp's session**, and YouTube answers it 403. ffmpeg produced zero bytes, and discord-player cannot tell an empty stream from a track that finished, so no error event ever fired and none of my handlers ran.
+
+Three tests, same video, same minute:
+
+```
+yt-dlp downloads it itself      works, 3,433,755 bytes
+yt-dlp --get-url then ffmpeg    403 Forbidden
+yt-dlp -o -  piped              works, 3,433,755 bytes
+```
+
+So the bot now pipes. yt-dlp writes audio to stdout, ffmpeg reads bytes off a pipe and never talks to YouTube at all. That removed the 403, the URL expiry, the IP binding **and** the 5–9 second stall in one change — resolving a URL blocked before anything could start, spawning a pipe takes 11ms. `5705ms → 11ms`.
+
+**Then piping caused its own problem.** YouTube refuses two simultaneous media fetches from one address:
+
+```
+one fetch alone       4,000,874 bytes
+two started together  0 bytes and 0 bytes
+```
+
+It takes down both, not just the later one. Asking for a URL meant yt-dlp ran five seconds and exited; piping means it stays connected for the entire song, so tracks now overlapped where they never had. I added a retry, and it worked — but the log then showed attempt 1 failing on *every* track rather than occasionally, which meant the thing it collided with was always present. It was the previous song's yt-dlp, still connected. Killing it before starting the next one fixed it properly and took a track from ~14 seconds to audio back down to ~6.
+
+**"Fails occasionally" and "fails every time" are different diagnoses.** A retry that always fires is not resilience, it is a fixed cost hiding a bug. If the safety net catches everything, ask why everything is falling.
+
+### A correction to my own correction
+
+Earlier today I wrote that `jsRuntimes: 'node'` was inert and never reached yt-dlp. **That was wrong.** I had "tested" it by asking for a URL with and without the flag and comparing the `c=` parameter — but `c=` is `ANDROID_VR` either way, so the test could not have told the difference no matter the answer, and I drew a confident conclusion from it anyway.
+
+Testing whether the download actually succeeds:
+
+```
+without flag: FAILED
+with flag:    OK    (3,433,755 bytes)
+```
+
+The flag is load-bearing. **A test that cannot fail is not a test** — check that the discriminator actually discriminates before trusting what it says.
+
+Same day, same category as the other three: `FFMPEG_PATH`, `insertTrack(track, 0)`, and `subprocess.killed`. Four assumptions about what an API does based on its name, all wrong, all checkable in one command. The one that finally taught me the habit was printing `spawnargs` — one line showing the exact command that ran, no inference required.
+
+### Where it stands
+
+It works. Play a song, queue another, play a third over the top, let the queue advance on its own — right song, queue preserved, bot stays in the channel, no silent failures.
+
+Still open: the comment pass, `deferReply` outside the try block in seven handlers, the npm audit warnings, and deploying the landing page.
+
 Still open:
 - Finish the comment pass — /trandom through /trelated, the utility functions, and login.
 - `deferReply` sits outside the try block in seven handlers. The router-level catch stops the crash, but those handlers still cannot tell the user their command died.
