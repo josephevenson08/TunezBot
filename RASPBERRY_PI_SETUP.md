@@ -402,10 +402,63 @@ Commands show up in the new server within about a minute.
 
 Also worth knowing: commands are registered per server on purpose. They appear in about a minute that way, versus up to an hour for global registration. The trade is that a new server needs a redeploy, which for a personal bot is the right way round.
 
+## Day to day: turning it on and off
+
+Log back in from Windows PowerShell:
+
+```bash
+ssh josephevenson@tunezbot.local
+```
+
+Two separate switches, and the difference matters. **Running now** and **starts on boot** are independent:
+
+| Command | Effect |
+| --- | --- |
+| `sudo systemctl stop tunezbot` | Offline now, but comes back on the next reboot |
+| `sudo systemctl disable tunezbot` | Will not start on boot, but keeps running right now |
+| `sudo systemctl start tunezbot` | Online now |
+| `sudo systemctl enable tunezbot` | Will start on boot |
+
+So to genuinely take the bot offline for a while:
+
+```bash
+sudo systemctl stop tunezbot && sudo systemctl disable tunezbot
+```
+
+And to bring it back:
+
+```bash
+sudo systemctl enable tunezbot && sudo systemctl start tunezbot
+```
+
+Check which state it is in:
+
+```bash
+systemctl status tunezbot
+```
+
+`active (running)` means online now. `enabled` means it will come back after a reboot. Reading only one of those is how you end up thinking it is off when it is not.
+
+Watch what it is doing:
+
+```bash
+journalctl -u tunezbot -f
+```
+
+`Ctrl+C` leaves the log view without touching the bot.
+
+Update it after pushing code:
+
+```bash
+cd ~/TunezBot && git pull && sudo systemctl restart tunezbot
+```
+
+**Closing the SSH window does nothing to the bot.** That is the entire point of step 18 — it belongs to systemd now, not to a terminal.
+
 ## Shutting the Pi down
 
 ```bash
 sudo shutdown -h now
 ```
 
-Pulling the power on a running Pi risks corrupting the SD card that holds the whole OS. With systemd set up, a reboot is fine — the bot comes back on its own.
+Pulling the power on a running Pi risks corrupting the SD card that holds the whole OS. Wait for it to go quiet, then unplugging is fine. With systemd set up a reboot is safe too — the bot comes back on its own.
