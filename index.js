@@ -444,14 +444,17 @@ async function handleInteraction(interaction) {
       const query = await resolveToUrl(interaction.options.getString('query', true));
       const existingQueue = getQueue(interaction);
 
-      // Already playing: put the new song at the front of the queue and skip to it.
+      // Already playing: play the new song right now and leave the queue untouched.
       //
-      // This used to delete the queue and build a new one. That worked, but queue.delete()
-      // triggers leaveOnStop, so the bot dropped out of the voice channel and immediately
-      // rejoined on every /tplay — visible in Discord, and the rejoin was timing out with
-      // an AbortError from discord-voip. Inserting and skipping keeps the connection up,
-      // keeps the rest of the queue in place, and is less code than the save-delete-rebuild
-      // it replaces.
+      // Two earlier attempts at this were wrong. Deleting the queue and rebuilding it
+      // worked, but queue.delete() triggers leaveOnStop, so the bot dropped out of voice
+      // and rejoined on every /tplay — and that rejoin was what timed out with the
+      // AbortError. Then insertTrack(track, 0) followed by skip() played the wrong song,
+      // because insertTrack appended instead of inserting at the front, so the skip landed
+      // on whatever was already queued.
+      //
+      // node.play(track, { queue: false }) says "play this now, do not queue it", which is
+      // exactly what this command means. /trandom already uses it for the same reason.
       if (existingQueue && !existingQueue.deleted && existingQueue.currentTrack) {
         const searchResult = await withRetry(() =>
           player.search(query, { requestedBy: interaction.user }),
@@ -463,8 +466,7 @@ async function handleInteraction(interaction) {
           return;
         }
 
-        existingQueue.insertTrack(track, 0);
-        existingQueue.node.skip();
+        await withRetry(() => existingQueue.node.play(track, { queue: false }));
 
         await interaction.followUp(`Playing: **${trackTitle(track)}**`);
         return;
