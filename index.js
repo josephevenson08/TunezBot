@@ -815,8 +815,18 @@ async function handleInteraction(interaction) {
 // running, never take the process down. 10062 "Unknown interaction" is the common one:
 // Discord only allows 3 seconds to acknowledge a command, and a slow reply misses it.
 client.on(Events.InteractionCreate, (interaction) => {
+  // Discord stamps every interaction with a creation time and then gives us 3 seconds to
+  // acknowledge it. Recording how old one already was when it reached this line is what
+  // separates "the event arrived late" from "our reply was slow" — the two look identical
+  // from the outside, and both show up as 10062 Unknown interaction.
+  const ageOnArrival = Date.now() - interaction.createdTimestamp;
+
   handleInteraction(interaction).catch((error) => {
-    console.error('Interaction handler error:', error);
+    const name = interaction.isChatInputCommand() ? `/${interaction.commandName}` : 'interaction';
+    console.error(
+      `Interaction handler error on ${name} (${ageOnArrival}ms old on arrival, ${Date.now() - interaction.createdTimestamp}ms by failure):`,
+      error,
+    );
   });
 });
 
