@@ -72,7 +72,23 @@ async function createYoutubeStream(track) {
   });
 
   // converts into a string, whitespaces reduced, and splits on new line.
-  return String(output).trim().split(/\r?\n/)[0]; 
+  return String(output).trim().split(/\r?\n/)[0];
+}
+
+// Wraps createYoutubeStream to log how long yt-dlp took. The first track of a session
+// keeps failing while later ones play, with nothing logged — which is the shape of a
+// timeout, not an error. yt-dlp is a python zipapp that has to unpack and byte-compile
+// on its first run, so this prints whether that first call is genuinely slow.
+async function createYoutubeStreamTimed(track) {
+  const startedAt = Date.now();
+  try {
+    const url = await createYoutubeStream(track);
+    console.log(`yt-dlp resolved a stream in ${Date.now() - startedAt}ms`);
+    return url;
+  } catch (error) {
+    console.error(`yt-dlp failed after ${Date.now() - startedAt}ms:`, error.message);
+    throw error;
+  }
 }
 
 // Music player events handle messages and bot status while tracks play.
@@ -376,7 +392,7 @@ async function findRelatedTrack(guildId, seedTrack) {
 client.once(Events.ClientReady, async (readyClient) => {
   try {
     await player.extractors.register(YoutubeExtractor, {
-      createStream: createYoutubeStream,
+      createStream: createYoutubeStreamTimed,
     });
   } catch (error) {
     console.error('Failed to register the YouTube extractor. Music playback will not work.', error);
