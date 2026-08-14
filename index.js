@@ -83,6 +83,11 @@ function getSessionHistory(guildId) {
 //
 // Only retries when nothing at all came through. A stream that dies halfway is a different
 // problem and restarting it would replay the song from the beginning.
+// The yt-dlp process currently feeding audio. This bot plays exactly one thing at a time,
+// so if one is still running when a new track starts, it belongs to the track we just left
+// and is doing nothing but holding open a connection YouTube will refuse us for.
+let activeYoutubeDl = null;
+
 function createYoutubeStream(track) {
   const output = new PassThrough();
   let attempts = 0;
@@ -91,7 +96,20 @@ function createYoutubeStream(track) {
     attempts += 1;
     let receivedBytes = false;
 
+    // Without this the first attempt failed on every single track, not occasionally -
+    // the previous song's yt-dlp was always still connected, so every new one collided
+    // with it and had to wait for the retry. That cost a wasted 6s extraction plus the
+    // 2s backoff on every track.
+    if (activeYoutubeDl) {
+      try {
+        activeYoutubeDl.kill();
+      } catch {
+        // already gone, which is the common case
+      }
+    }
+
     const subprocess = spawnYoutubeDl(track);
+    activeYoutubeDl = subprocess;
 
     subprocess.stdout.on('data', () => {
       receivedBytes = true;
