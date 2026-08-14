@@ -77,6 +77,13 @@ function createYoutubeStream(track) {
     output: '-', // write the audio to stdout
     format: track.live ? 'best[height<=360]' : 'bestaudio', // audio only, no video data to throw away
     jsRuntimes: 'node',
+    // Do not use yt-dlp's cache. It caches YouTube's player, and a stale cached player
+    // signs URLs that YouTube then refuses with 403 - extraction "succeeds" and the
+    // download fails. That is what made playback look random all day: some songs need a
+    // signed URL and some do not, so a stale cache breaks a seemingly arbitrary subset.
+    // Measured the cost of skipping it on this pi: 6.062s vs 5.931s. 131ms to remove an
+    // entire class of intermittent failure.
+    noCacheDir: true,
     // Deliberately NOT quiet and NOT noWarnings. Silencing yt-dlp has now hidden the cause
     // of a failure three separate times on this project - the JS runtime warning that
     // explained the 403s was suppressed for hours, and then a track failed with exit code 1
