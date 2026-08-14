@@ -183,7 +183,11 @@ Updating the bot from now on:
 cd ~/TunezBot && git pull && sudo systemctl restart tunezbot
 ```
 
-Final test: close the SSH window completely, then run `/tplay` from Discord. Music with no terminal open anywhere means it is genuinely hosted. Pulling the power and plugging it back in is worth trying too — it should come back on its own in about two minutes.
+Final test: close the SSH window completely, then run `/tplay` from Discord. Music with no terminal open anywhere means it is genuinely hosted.
+
+**Then do the power-cut test, because it is the one that actually proves it.** Unplug the Pi, plug it back in, wait about two minutes, and run `/tplay` without touching a keyboard. I did this and the song played. Nothing was logged into, no terminal was open, and nothing was started by hand — systemd brought it back on its own.
+
+That single test covers every line of the unit file at once: `enable` started it at boot with nobody logged in, `After=network-online.target` made it wait for the network instead of failing to reach Discord, and `WorkingDirectory` meant dotenv still found `.env` on a cold boot. If any one of those were wrong, the bot would be silently offline right now and I would not find out until the next time I wanted music.
 
 ## Problems I hit on the Pi that never happened on Windows
 

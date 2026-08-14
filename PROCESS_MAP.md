@@ -152,6 +152,10 @@ Back on my own internet, so the SSH step that blocked this on July 27 finally wo
 
 **Where this leaves the project.** The thing works, on hardware in this house, with no terminal open. `PROCESS_MAP.md` has said "Pi hardware not yet purchased" since July. It does not anymore.
 
+**Verified with a power cut**, which is the test that actually matters. Unplugged the Pi, plugged it back in, waited two minutes, ran `/tplay` without touching a keyboard, and the song played. Nothing logged into, nothing started by hand. That one test exercises every line of the systemd unit at once — `enable` starting it at boot with nobody logged in, `After=network-online.target` making it wait for the network rather than failing to reach Discord, and `WorkingDirectory` meaning dotenv still finds `.env` on a cold boot. Any one of those wrong and the bot would be quietly offline until the next time somebody wanted music, which is the worst way to find out.
+
+That is the actual end of the arc that started with "should this run on a Pi or a cloud VM". The answer was a Pi, for a reason nobody would have guessed at the start — not cost, not learning, but the IP address.
+
 Still open:
 - Finish the comment pass — /trandom through /trelated, the utility functions, and login.
 - `deferReply` sits outside the try block in seven handlers. The router-level catch stops the crash, but those handlers still cannot tell the user their command died.
