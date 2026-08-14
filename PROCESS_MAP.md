@@ -156,6 +156,35 @@ Back on my own internet, so the SSH step that blocked this on July 27 finally wo
 
 That is the actual end of the arc that started with "should this run on a Pi or a cloud VM". The answer was a Pi, for a reason nobody would have guessed at the start — not cost, not learning, but the IP address.
 
+### Correction to the four failures above, written later the same day
+
+I wrote that section too early, while the bot was working. It stopped working again half an hour later, and two of the four "fixes" turned out to be wrong. Leaving the original text above and correcting it here, because the mistakes are the useful part.
+
+**Failure 3 was real, the fix was not.** `ffmpeg-static` genuinely cannot resolve hostnames — a statically linked glibc binary cannot use NSS. But `FFMPEG_PATH=/usr/bin/ffmpeg` does nothing, because prism-media looks for `ffmpeg-static` first and never reads that variable. One line would have caught it:
+
+```
+FFMPEG_PATH env: /usr/bin/ffmpeg
+actually using: node_modules/ffmpeg-static/ffmpeg
+```
+
+The bot ran on the broken binary for hours while I believed that was solved. **Setting a config value is not the same as the program reading it.**
+
+**Failure 4 was a misdiagnosis.** `jsRuntimes: 'node'` never reached yt-dlp — `youtube-dl-exec` does not pass that flag through. Asking for the same URL with and without the option returned the same client (`ANDROID_VR`) both times, so that commit changed nothing. The 403 was almost certainly a symptom of the DNS fault below.
+
+**The real cause of most of the day was DNS.** Every uncached lookup took exactly 5.029 seconds — the glibc resolver timeout. Each query is fast alone (v4 0.063s, v6 0.022s) and stalls when sent together, because glibc sends A and AAAA in parallel on one socket and this router mishandles it. Discord gives 3 seconds to acknowledge a command, so `deferReply` was dead before its request left the Pi. Voice endpoints too, which is where the `AbortError` came from. `single-request-reopen` took lookups from 5.029s to 0.041s.
+
+**How I should have found it faster.** I chased five hypotheses — clock skew, IPv6 latency, opusscript CPU, stale connection state, YouTube's JS challenge — and measured each one, which was right. What I did badly was *believing a fix worked because the symptom went away*. The symptom went away because a cache was warm. Every "it works now" today was followed by "it stopped again", and each time I attributed the recovery to whatever I had just changed rather than verifying the mechanism.
+
+The instrumentation is what finally broke it open: logging how old an interaction was on arrival versus at failure (`110ms old on arrival, 5351ms by failure`) turned "somewhere in these three seconds" into "the outbound request takes five seconds", and 5.029 is a number with exactly one meaning.
+
+### Where it actually stands
+
+Working: audio plays, DNS is fixed, the bot survives errors instead of exiting, systemd brings it back from a power cut.
+
+Not working: the **second** voice connection in a session. First `/tplay` plays; a later one aborts in `discord-voip` waiting for the connection to become Ready. `/tplay` deletes the existing queue, which drops the voice connection, then immediately rejoins — that teardown-and-rejoin is the next thing to investigate.
+
+Not yet done: removing `ffmpeg-static` from `package.json`. The Pi is currently running on a symlink in `node_modules` that `npm install` will silently undo.
+
 Still open:
 - Finish the comment pass — /trandom through /trelated, the utility functions, and login.
 - `deferReply` sits outside the try block in seven handlers. The router-level catch stops the crash, but those handlers still cannot tell the user their command died.

@@ -249,13 +249,83 @@ URL=$(./node_modules/youtube-dl-exec/bin/yt-dlp -f bestaudio --get-url "https://
 Failed to resolve hostname rr1---sn-vgqsrnlk.googlevideo.com: System error
 ```
 
-`ffmpeg-static` ships a statically linked binary, and a statically linked glibc cannot use NSS, which is how glibc looks up hostnames. It can decode a local file perfectly and cannot reach a single URL. The system ffmpeg from step 14 is dynamically linked and works, which is what `FFMPEG_PATH=/usr/bin/ffmpeg` in `.env` is for. prism-media checks that variable before it reaches for `ffmpeg-static`, and it is per-machine config so Windows keeps using the bundled binary.
+`ffmpeg-static` ships a statically linked binary, and a statically linked glibc cannot use NSS, which is how glibc looks up hostnames. It can decode a local file perfectly and cannot reach a single URL. The system ffmpeg from step 14 is dynamically linked and works.
+
+**Correction — FFMPEG_PATH does not work.** I first "fixed" this by putting `FFMPEG_PATH=/usr/bin/ffmpeg` in `.env`, on the assumption that prism-media checks that variable first. It does not. prism-media 1.3.5 looks for `ffmpeg-static` **before** anything else and never reads `FFMPEG_PATH` at all. Proved it:
+
+```bash
+node -r dotenv/config -e "console.log(process.env.FFMPEG_PATH);const {FFmpeg}=require('prism-media');console.log(FFmpeg.getInfo().command)"
+```
+
+```
+/usr/bin/ffmpeg
+/home/josephevenson/TunezBot/node_modules/ffmpeg-static/ffmpeg
+```
+
+The env var was set and being ignored. The bot used the broken binary for hours while I thought this was solved.
+
+Temporary patch on the pi, which `npm install` will undo:
+
+```bash
+mv node_modules/ffmpeg-static/ffmpeg node_modules/ffmpeg-static/ffmpeg.static-broken
+ln -s /usr/bin/ffmpeg node_modules/ffmpeg-static/ffmpeg
+```
+
+**The real fix is to remove `ffmpeg-static` from package.json entirely** and install ffmpeg from the OS on every platform, since its Linux build cannot do what this bot needs. Not done yet.
+
+The lesson: setting a config value is not the same as the program reading it. `FFmpeg.getInfo().command` was one line and would have caught this immediately.
 
 **4. YouTube's JavaScript challenge (this one is not Pi-specific).**
 
 With the system ffmpeg the error changed from a DNS failure to `403 Forbidden`. YouTube protects playback URLs with a JavaScript challenge and yt-dlp needs a JS engine to solve it. Without one it falls back to a client whose URLs only work for yt-dlp's own headers, so ffmpeg gets refused. yt-dlp had been printing a warning about this the whole time and `noWarnings: true` in the code was hiding it.
 
-yt-dlp only enables deno by default, but Node is already installed, so `jsRuntimes: 'node'` in `createYoutubeStream` fixes it. That is committed, so this one needs nothing done by hand.
+**Correction — this was a misdiagnosis, and the fix for it does nothing.** I added `jsRuntimes: 'node'` to `createYoutubeStream` assuming `youtube-dl-exec` converts camelCase keys into kebab-case flags. It does not pass that one through. Proved it by asking for the URL both ways and reading the client out of the `c=` parameter:
+
+```
+client without option: ANDROID_VR
+client with option:    ANDROID_VR
+```
+
+Identical. The flag never reached yt-dlp, so that commit changed nothing.
+
+The 403 was almost certainly the DNS fault below instead — `googlevideo` URLs are bound to the IP that requested them, and a resolver returning inconsistent address families breaks that. Once DNS was fixed, `--get-url` piped into ffmpeg decoded fine **with no js-runtimes flag at all**.
+
+`jsRuntimes: 'node'` is still in `index.js`. It is inert, not harmful, and should either be made to work or removed.
+
+**5. DNS was the real problem, and it caused most of the day.**
+
+Every uncached hostname lookup took exactly 5.029 seconds — the glibc resolver timeout:
+
+```bash
+for i in 1 2 3; do echo -n "lookup $i: "; ( time getent ahosts discord.com >/dev/null ) 2>&1 | grep real; sleep 12; done
+```
+
+```
+lookup 1: 0.017s   <- cached
+lookup 2: 5.029s
+lookup 3: 5.029s
+```
+
+Split by family and each query is fast on its own:
+
+```
+v4: 0.063s
+v6: 0.022s
+both together: 5.029s
+```
+
+glibc sends the A and AAAA queries in parallel on one socket, and this router mishandles that, so the resolver waits out the full timeout every time. Discord allows 3 seconds to acknowledge a command, so `deferReply` was dead before its request left the pi. Same for voice endpoints, which is where the `AbortError` came from.
+
+Fix, through NetworkManager because it regenerates `/etc/resolv.conf`:
+
+```bash
+sudo nmcli con mod "Wired connection 1" ipv4.dns-options "single-request-reopen"
+sudo systemctl restart NetworkManager
+```
+
+Lookups went from 5.029s to 0.041s. `single-request-reopen` makes glibc send the two queries sequentially on separate sockets instead of in parallel on one.
+
+**This is the most transferable thing on this page.** "Works, then does not, then does" on a home network is very often DNS, and `getent ahosts` versus `ahostsv4`/`ahostsv6` catches it in thirty seconds.
 
 ## Moving the bot to another server, or adding a second one
 
