@@ -380,8 +380,12 @@ client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);
 });
 
-// Main slash command router. Every Discord command ends up in this event.
-client.on(Events.InteractionCreate, async (interaction) => {
+// Main slash command router. Every Discord command ends up here.
+// This is a named async function rather than an inline listener so the registration below
+// can attach a .catch() to it. Without that, any error a handler does not catch itself
+// escapes as a rejected promise that discord.js turns into a crash — which is exactly what
+// an expired interaction did on the first live run on the Pi.
+async function handleInteraction(interaction) {
   if (!interaction.isChatInputCommand() || !interaction.inGuild()) {
     return;
   }
@@ -799,6 +803,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+}
+
+// One safety net for every command. A command that fails should log and leave the bot
+// running, never take the process down. 10062 "Unknown interaction" is the common one:
+// Discord only allows 3 seconds to acknowledge a command, and a slow reply misses it.
+client.on(Events.InteractionCreate, (interaction) => {
+  handleInteraction(interaction).catch((error) => {
+    console.error('Interaction handler error:', error);
+  });
+});
+
+// discord.js reports client-level problems here. Without a listener, an emitted 'error'
+// is rethrown and crashes the process.
+client.on('error', (error) => {
+  console.error('Discord client error:', error);
 });
 
 client.login(DISCORD_TOKEN).catch((error) => {
