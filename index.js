@@ -77,17 +77,24 @@ function createYoutubeStream(track) {
     output: '-', // write the audio to stdout
     format: track.live ? 'best[height<=360]' : 'bestaudio', // audio only, no video data to throw away
     jsRuntimes: 'node',
-    noWarnings: true,
-    noProgress: true,
-    quiet: true, // keep stderr clean, stdout is carrying audio
+    // Deliberately NOT quiet and NOT noWarnings. Silencing yt-dlp has now hidden the cause
+    // of a failure three separate times on this project - the JS runtime warning that
+    // explained the 403s was suppressed for hours, and then a track failed with exit code 1
+    // and nothing to say for itself. stdout is carrying the audio, so stderr is free.
+    noProgress: true, // progress bars are the one thing that is genuinely just noise
   });
 
   // execa rejects this promise when yt-dlp exits non-zero. Nothing awaits it, so without a
   // catch here a failed track becomes an unhandled rejection instead of a log line.
   subprocess.catch((error) => {
-    if (!subprocess.killed) {
-      console.error('yt-dlp stream failed:', error.shortMessage || error.message);
+    if (subprocess.killed) {
+      return; // we killed it ourselves, e.g. the track was skipped
     }
+
+    // error.stderr is where yt-dlp actually explains itself. Without it this logs an exit
+    // code and nothing else, which is what happened the first time round.
+    const reason = (error.stderr || '').trim().split('\n').slice(-4).join(' | ');
+    console.error(`yt-dlp stream failed for ${track.url}: ${reason || error.shortMessage || error.message}`);
   });
 
   return subprocess.stdout;
