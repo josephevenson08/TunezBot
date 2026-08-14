@@ -41,4 +41,13 @@ YouTube's bot-detection treats requests from datacenter IP ranges (AWS, Oracle C
 9. Plug the ethernet into the ethernet port.
 10. Plug in the USB-C power supply and wait around 2 minutes to get a fully boot or at least thats what I did.
 11. I opened powershell on your windows PC and typed in "ssh myusername@tunezbot.local", fill in yhe "myusername" with the username you set.
-- STOPPED HERE DUE TO NOT BEING ON OWN NETWORK
+- Had to stop here the first time because I was not on my own internet. The ".local" name only works when your PC and the Pi are on the same network, so this step has to happen at home.
+
+12. Got back on my own internet and connected.
+- The username I set in the Imager is **josephevenson**, so the command is `ssh josephevenson@tunezbot.local`. Writing it down here because I forgot it and had to guess at it. The password does NOT go in this file.
+- First connection asks "The authenticity of host ... can't be established" and shows a fingerprint. Type "yes". That is just my laptop saving the Pi's identity so it can warn me if it ever changes, and it only happens once.
+- The password prompt shows nothing at all while you type, no dots or stars. That is normal, it is not frozen.
+- Success looks like the prompt changing to `josephevenson@TunezBot:~ $`. From that point every command runs on the Pi, not on my laptop. Type `exit` to come back.
+- On my network tunezbot.local resolved to an IPv6 address instead of the usual 192.168.x.x. That is fine, it still works.
+- If it ever fails to resolve, find the Pi's IP on the router's connected devices page and use `ssh josephevenson@<that ip>` instead.
+- If I had not been able to guess the username, it is recoverable by putting the SD card back in the PC and reading custom.toml or userconf.txt on the small bootfs partition. Windows will offer to format the other partition when the card goes in — do NOT do that, that is the Linux install.
