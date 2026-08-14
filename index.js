@@ -389,11 +389,23 @@ async function findRelatedTrack(guildId, seedTrack) {
 }
 
 // Load the YouTube extractor once the bot is logged in and ready.
+//
+// No createStream override any more. The yt-dlp one was added during the AWS attempt,
+// because the extractor's own path kept failing from a datacenter IP. That reason no
+// longer exists — the whole point of moving to the Pi was getting off those IP ranges.
+//
+// What it was costing: yt-dlp is a python program, and resolving one URL took 5.7s by
+// hand and 9.5s inside the bot on this board, almost all of it CPU. Extractor args did
+// not help (5.7s -> 5.1s), because the cost is python starting up, not network. Every
+// track paid that before a single byte of audio moved, and everything downstream — the
+// voice connection especially — was timing out in the gap.
+//
+// The extractor streams through youtubei.js instead: pure JavaScript, no child process,
+// no python, and no handing a URL to ffmpeg for YouTube to refuse. yt-dlp is still used
+// for searching, which is not on the playback path and where its maturity is worth having.
 client.once(Events.ClientReady, async (readyClient) => {
   try {
-    await player.extractors.register(YoutubeExtractor, {
-      createStream: createYoutubeStreamTimed,
-    });
+    await player.extractors.register(YoutubeExtractor, {});
   } catch (error) {
     console.error('Failed to register the YouTube extractor. Music playback will not work.', error);
     process.exit(1);
