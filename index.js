@@ -390,22 +390,20 @@ async function findRelatedTrack(guildId, seedTrack) {
 
 // Load the YouTube extractor once the bot is logged in and ready.
 //
-// No createStream override any more. The yt-dlp one was added during the AWS attempt,
-// because the extractor's own path kept failing from a datacenter IP. That reason no
-// longer exists — the whole point of moving to the Pi was getting off those IP ranges.
+// The createStream override stays. I tried removing it on the theory that it was only
+// ever an AWS workaround and the extractor's own youtubei.js path would be fine from a
+// residential IP — it would also have saved the 5-9 seconds of python startup that yt-dlp
+// costs on this board. It does not work: without the override every track fails with
+// NoResultError / ERR_NO_RESULT, which is the same error the AWS attempt hit. So the
+// extractor's built-in streaming is broken here for its own reasons, not the IP's, and
+// yt-dlp is doing real work rather than papering over something that has since healed.
 //
-// What it was costing: yt-dlp is a python program, and resolving one URL took 5.7s by
-// hand and 9.5s inside the bot on this board, almost all of it CPU. Extractor args did
-// not help (5.7s -> 5.1s), because the cost is python starting up, not network. Every
-// track paid that before a single byte of audio moved, and everything downstream — the
-// voice connection especially — was timing out in the gap.
-//
-// The extractor streams through youtubei.js instead: pure JavaScript, no child process,
-// no python, and no handing a URL to ffmpeg for YouTube to refuse. yt-dlp is still used
-// for searching, which is not on the playback path and where its maturity is worth having.
+// The cost is real and measured — see the timing wrapper below — but slow beats silent.
 client.once(Events.ClientReady, async (readyClient) => {
   try {
-    await player.extractors.register(YoutubeExtractor, {});
+    await player.extractors.register(YoutubeExtractor, {
+      createStream: createYoutubeStreamTimed,
+    });
   } catch (error) {
     console.error('Failed to register the YouTube extractor. Music playback will not work.', error);
     process.exit(1);
@@ -445,23 +443,40 @@ async function handleInteraction(interaction) {
     try {
       const query = await resolveToUrl(interaction.options.getString('query', true));
       const existingQueue = getQueue(interaction);
-      const preservedTracks =
-        existingQueue && !existingQueue.deleted ? queuedTracks(existingQueue) : [];
 
-      if (existingQueue && !existingQueue.deleted) {
-        existingQueue.delete();
+      // Already playing: put the new song at the front of the queue and skip to it.
+      //
+      // This used to delete the queue and build a new one. That worked, but queue.delete()
+      // triggers leaveOnStop, so the bot dropped out of the voice channel and immediately
+      // rejoined on every /tplay — visible in Discord, and the rejoin was timing out with
+      // an AbortError from discord-voip. Inserting and skipping keeps the connection up,
+      // keeps the rest of the queue in place, and is less code than the save-delete-rebuild
+      // it replaces.
+      if (existingQueue && !existingQueue.deleted && existingQueue.currentTrack) {
+        const searchResult = await withRetry(() =>
+          player.search(query, { requestedBy: interaction.user }),
+        );
+        const track = searchResult?.tracks?.[0];
+
+        if (!track) {
+          await interaction.followUp('Could not find anything for that.');
+          return;
+        }
+
+        existingQueue.insertTrack(track, 0);
+        existingQueue.node.skip();
+
+        await interaction.followUp(`Playing: **${trackTitle(track)}**`);
+        return;
       }
 
+      // Nothing playing, so there is no connection to preserve. Start one.
       const result = await withRetry(() =>
         player.play(channel, query, {
           requestedBy: interaction.user,
           nodeOptions: playerNodeOptions(interaction.channel),
         }),
       );
-
-      if (preservedTracks.length > 0) {
-        result.queue.addTrack(preservedTracks);
-      }
 
       await interaction.followUp(`Playing: **${trackTitle(result.track)}**`);
     } catch (error) {
