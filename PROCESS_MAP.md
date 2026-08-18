@@ -265,6 +265,54 @@ It works. Play a song, queue another, play a third over the top, let the queue a
 
 Still open: the comment pass, `deferReply` outside the try block in seven handlers, the npm audit warnings, and deploying the landing page.
 
+---
+
+## August 18 — moved it to another server, and YouTube moved too
+
+Switched the bot to a different Discord server. That part went fine: invite, copy the server ID, update `GUILD_IDS`, `npm run deploy`. No restart needed, since `index.js` only ever reads `DISCORD_TOKEN`.
+
+Then nothing would play. Same shape as before — track announced, "Queue finished", silence — except this time the log said exactly why, three times:
+
+```
+yt-dlp produced nothing on attempt 1, retrying in 2s
+yt-dlp produced nothing on attempt 2, retrying in 2s
+yt-dlp stream failed after 3 attempts: ERROR: unable to download video data: HTTP Error 403: Forbidden
+```
+
+**Diagnosis took four commands.** Four days ago this same failure was a silent "Queue finished" that cost hours. That difference is the entire return on yesterday's logging work.
+
+### Two of my guesses were wrong first
+
+**"yt-dlp is stale."** It is six weeks old and YouTube changes constantly, so this was the obvious call. `yt-dlp -U` said: *"yt-dlp is up to date (stable@2026.07.04)"*. It was already the latest release. Checking took one command; I should have run it before proposing the theory.
+
+**"Maybe the multi-server setup broke it."** My own suggestion to rule out, but worth writing down *why* it cannot be: the failing test is yt-dlp talking to YouTube from a terminal. No bot, no Discord, no `GUILD_IDS`. If a test with Discord entirely absent still fails, Discord configuration cannot be the cause. That is a useful shape of argument — **remove a whole subsystem from the test and see if the problem survives.**
+
+### What it actually is
+
+| Video | Result |
+| --- | --- |
+| Rick Astley — Never Gonna Give You Up | **0 bytes** |
+| CCR — Fortunate Son | **0 bytes** |
+| "Me at the zoo" (first video ever uploaded) | **252,182 bytes** |
+
+The IP is not blocked — an unrestricted amateur upload downloads fine. **Commercial music is being refused.** And Rick Astley played on the 14th and does not on the 18th, so YouTube tightened something around music content in those four days.
+
+Nothing on my side fixes it. Tried and failed: `--no-cache-dir` on and off, and pinning the `web`, `tv`, `mweb`, `android`, `ios` and `web_safari` clients. All zero.
+
+### The thing worth internalising
+
+**This bot's entire premise is pulling audio from a platform that actively works to prevent exactly that.** Periodic breakage is not a defect in the build, it is the standing cost of the design. The README has always gestured at this; now there is a dated instance with evidence.
+
+Which reframes what "done" means here. The bot cannot be made permanently reliable, because one end of it is adversarial and outside my control. What *can* be improved is **how fast a break can be diagnosed** — and that went from hours to four commands in one day. That is the achievable goal, and it is the one worth optimising.
+
+### Known limitation I introduced
+
+The fix that kills the previous track's yt-dlp before starting the next one is **global, not per-guild**. Fine for one server. If the bot ever plays in two servers simultaneously they will kill each other's audio. Needs keying by guild ID like everything else in this project if multi-server use becomes real.
+
+### Next
+
+Working out what a durable answer looks like for playing music that YouTube will not serve to an anonymous automated client. Options on the table: a signed-in session via cookies (with the honest downside that accounts used that way do get flagged), sources other than YouTube, or local files. Not decided.
+
 Still open:
 - Finish the comment pass — /trandom through /trelated, the utility functions, and login.
 - `deferReply` sits outside the try block in seven handlers. The router-level catch stops the crash, but those handlers still cannot tell the user their command died.
